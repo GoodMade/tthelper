@@ -123,6 +123,19 @@ const featuresConfig = {
       }
     }
   },
+  fixes: {
+    name: "Патчи",
+    options: {
+      disableHiddenLayerAutoclose: {
+        label: "Отключить автозакрытие скрытых слоев",
+        tooltip: "Оставляет слой раскрытым в левой панели, если он скрыт через display:none или настройку видимости.",
+        js: ["features/fixes/disable-hidden-layer-autoclose.js"],
+        deinit: "features/fixes/disable-hidden-layer-autoclose.deinit.js",
+        defaultValue: false,
+        reloadRequired: false
+      }
+    }
+  },
   rightPanelInterface: {
     name: "Интерфейс правой панели",
     options: {
