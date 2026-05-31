@@ -135,7 +135,9 @@ const featuresConfig = {
         tooltip: "Добавляет меню в правую панель для поиска и замены текста, включая регулярные выражения.",
         css: ["features/right-panel/search-replace.css"],
         js: ["features/right-panel/search-replace.js"],
+        isolated_js: ["features/right-panel/search-replace-storage-bridge.js"],
         deinit: "features/right-panel/search-replace.deinit.js",
+        isolated_deinit: "features/right-panel/search-replace-storage-bridge.deinit.js",
         defaultValue: true,
         reloadRequired: false
       }

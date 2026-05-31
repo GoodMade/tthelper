@@ -5,6 +5,11 @@
   const HOST_CLASS = 'tt-search-replace-tabs-host';
   const OPEN_CLASS = 'is-open';
   const PANEL_OPEN_CLASS = 'is-panel-open';
+  const CUSTOM_PRESETS_KEY = 'ttEnhancerSearchReplaceCustomPresets';
+  const PRESET_SETTINGS_KEY = 'ttEnhancerSearchReplacePresetSettings';
+  const CUSTOM_PRESET_PREFIX = 'custom:';
+  const STORAGE_REQUEST_SOURCE = 'tt-enhancer-search-replace';
+  const STORAGE_RESPONSE_SOURCE = 'tt-enhancer-search-replace-storage-bridge';
 
   try {
     window[STATE_KEY]?.destroy?.();
@@ -13,6 +18,8 @@
   let runtimeRequire = null;
   let mountObserver = null;
   let activeCanvasOverlay = null;
+  let customPresets = [];
+  let presetSettings = { order: [], disabled: [] };
 
   function getRuntimeRequire() {
     if (runtimeRequire) return runtimeRequire;
@@ -69,6 +76,22 @@
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/></svg>';
   }
 
+  function saveIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12.2L21 6.8V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm1 2v14h2v-6h8v6h3V7.7L16.3 5H16v5H7V5H6Zm4 14h4v-4h-4v4Zm-1-9h5V5H9v5Z"/></svg>';
+  }
+
+  function undoIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H5V3H3v8h8V9H6.7a7 7 0 1 1 1.9 7.4l-1.4 1.4A9 9 0 1 0 9 7Z"/></svg>';
+  }
+
+  function settingsIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13.5a7.7 7.7 0 0 0 .05-1.5l2-1.55-2-3.46-2.43.98a7.6 7.6 0 0 0-1.3-.75L15.35 4h-4l-.37 3.22c-.46.2-.9.45-1.3.75L7.25 6.99l-2 3.46L7.24 12a7.7 7.7 0 0 0 0 1.5l-2 1.55 2 3.46 2.43-.98c.41.3.84.55 1.3.75l.37 3.22h4l.37-3.22c.46-.2.9-.45 1.3-.75l2.43.98 2-3.46-2.04-1.55ZM13.35 15.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg>';
+  }
+
+  function trashIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-.8 11H6.8L6 9Zm4 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"/></svg>';
+  }
+
   const PRESETS = [
     {
       id: 'double-quotes-to-guillemets',
@@ -121,11 +144,254 @@
     }
   ];
 
-  function presetOptionsHtml() {
-    return [
-      '<option value="">Пользовательский шаблон</option>',
-      ...PRESETS.map((preset) => `<option value="${preset.id}">${preset.label}</option>`)
-    ].join('');
+  function getStorageArea() {
+    try {
+      return chrome?.storage?.sync || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function requestBridgeStorage(action, payload, callback) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let done = false;
+    let attempts = 0;
+    let timer = 0;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+    };
+    const finish = (ok, data, error = '') => {
+      if (done) return;
+      done = true;
+      cleanup();
+      callback(ok, data, error);
+    };
+    function onMessage(event) {
+      if (event.source !== window) return;
+      const message = event.data;
+      if (!message || message.source !== STORAGE_RESPONSE_SOURCE || message.id !== id) return;
+      finish(!!message.ok, message.data, message.error || '');
+    }
+    const send = () => {
+      if (done) return;
+      attempts += 1;
+      if (attempts > 14) {
+        finish(false, null, 'Хранилище расширения недоступно');
+        return;
+      }
+
+      window.postMessage({
+        source: STORAGE_REQUEST_SOURCE,
+        id,
+        action,
+        payload
+      }, '*');
+      timer = setTimeout(send, 150);
+    };
+
+    window.addEventListener('message', onMessage);
+    send();
+  }
+
+  function normalizePresetScope(preset) {
+    return {
+      className: String(preset?.scope?.className || preset?.scopeClass || ''),
+      tags: String(preset?.scope?.tags || preset?.scopeTags || '')
+    };
+  }
+
+  function normalizePresetSettings(value) {
+    const order = Array.isArray(value?.order) ? value.order.map(String).filter(Boolean) : [];
+    const disabled = Array.isArray(value?.disabled) ? value.disabled.map(String).filter(Boolean) : [];
+    return {
+      order: Array.from(new Set(order)),
+      disabled: Array.from(new Set(disabled))
+    };
+  }
+
+  function normalizeCustomPreset(item) {
+    if (!item || typeof item !== 'object') return null;
+    const label = String(item.label || '').trim();
+    const find = String(item.find || '');
+    if (!label || !find) return null;
+    return {
+      id: String(item.id || `${CUSTOM_PRESET_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`),
+      label,
+      find,
+      replace: String(item.replace || ''),
+      regex: !!item.regex,
+      scope: normalizePresetScope(item)
+    };
+  }
+
+  function loadCustomPresets(callback) {
+    const storage = getStorageArea();
+    if (!storage) {
+      requestBridgeStorage('get', { key: CUSTOM_PRESETS_KEY, defaultValue: [] }, (ok, data) => {
+        customPresets = (ok && Array.isArray(data) ? data : [])
+          .map(normalizeCustomPreset)
+          .filter(Boolean);
+        callback(customPresets);
+      });
+      return;
+    }
+
+    try {
+      storage.get({ [CUSTOM_PRESETS_KEY]: [] }, (items) => {
+        let error = null;
+        try {
+          error = chrome?.runtime?.lastError;
+        } catch {}
+        if (error) {
+          callback([]);
+          return;
+        }
+
+        customPresets = (Array.isArray(items?.[CUSTOM_PRESETS_KEY]) ? items[CUSTOM_PRESETS_KEY] : [])
+          .map(normalizeCustomPreset)
+          .filter(Boolean);
+        callback(customPresets);
+      });
+    } catch {
+      callback([]);
+    }
+  }
+
+  function saveCustomPresets(callback) {
+    const storage = getStorageArea();
+    if (!storage) {
+      requestBridgeStorage('set', { key: CUSTOM_PRESETS_KEY, value: customPresets }, (ok, data, error) => {
+        callback(ok, error || '');
+      });
+      return;
+    }
+
+    try {
+      storage.set({ [CUSTOM_PRESETS_KEY]: customPresets }, () => {
+        let error = null;
+        try {
+          error = chrome?.runtime?.lastError;
+        } catch {}
+        callback(!error, error?.message || '');
+      });
+    } catch (error) {
+      callback(false, error?.message || 'Не удалось сохранить шаблон');
+    }
+  }
+
+  function loadPresetSettings(callback) {
+    const storage = getStorageArea();
+    if (!storage) {
+      requestBridgeStorage('get', { key: PRESET_SETTINGS_KEY, defaultValue: {} }, (ok, data) => {
+        presetSettings = normalizePresetSettings(ok ? data : {});
+        callback(presetSettings);
+      });
+      return;
+    }
+
+    try {
+      storage.get({ [PRESET_SETTINGS_KEY]: {} }, (items) => {
+        let error = null;
+        try {
+          error = chrome?.runtime?.lastError;
+        } catch {}
+        presetSettings = normalizePresetSettings(error ? {} : items?.[PRESET_SETTINGS_KEY]);
+        callback(presetSettings);
+      });
+    } catch {
+      callback(presetSettings);
+    }
+  }
+
+  function savePresetSettings(callback) {
+    const storage = getStorageArea();
+    const value = normalizePresetSettings(presetSettings);
+    presetSettings = value;
+    if (!storage) {
+      requestBridgeStorage('set', { key: PRESET_SETTINGS_KEY, value }, (ok, data, error) => {
+        callback?.(ok, error || '');
+      });
+      return;
+    }
+
+    try {
+      storage.set({ [PRESET_SETTINGS_KEY]: value }, () => {
+        let error = null;
+        try {
+          error = chrome?.runtime?.lastError;
+        } catch {}
+        callback?.(!error, error?.message || '');
+      });
+    } catch (error) {
+      callback?.(false, error?.message || 'Не удалось сохранить порядок шаблонов');
+    }
+  }
+
+  function loadPresetState(callback) {
+    let pending = 2;
+    const done = () => {
+      pending -= 1;
+      if (!pending) callback();
+    };
+    loadCustomPresets(done);
+    loadPresetSettings(done);
+  }
+
+  function getAllPresets() {
+    const presets = [...PRESETS, ...customPresets];
+    const orderIndex = new Map(presetSettings.order.map((id, index) => [id, index]));
+    return presets.slice().sort((a, b) => {
+      const ai = orderIndex.has(a.id) ? orderIndex.get(a.id) : Number.MAX_SAFE_INTEGER;
+      const bi = orderIndex.has(b.id) ? orderIndex.get(b.id) : Number.MAX_SAFE_INTEGER;
+      if (ai !== bi) return ai - bi;
+      return presets.indexOf(a) - presets.indexOf(b);
+    });
+  }
+
+  function isPresetDisabled(id) {
+    return presetSettings.disabled.includes(id);
+  }
+
+  function setPresetDisabled(id, disabled) {
+    const values = new Set(presetSettings.disabled);
+    if (disabled) values.add(id);
+    else values.delete(id);
+    presetSettings = {
+      ...presetSettings,
+      disabled: Array.from(values)
+    };
+  }
+
+  function setPresetOrder(ids) {
+    const knownIds = new Set(getAllPresets().map((preset) => preset.id));
+    presetSettings = {
+      ...presetSettings,
+      order: ids.filter((id) => knownIds.has(id))
+    };
+  }
+
+  function deleteCustomPreset(id) {
+    const before = customPresets.length;
+    customPresets = customPresets.filter((preset) => preset.id !== id);
+    presetSettings = {
+      order: presetSettings.order.filter((item) => item !== id),
+      disabled: presetSettings.disabled.filter((item) => item !== id)
+    };
+    return customPresets.length !== before;
+  }
+
+  function getPresetById(id) {
+    return getAllPresets().find((item) => item.id === id) || null;
+  }
+
+  function getSelectablePresets(query = '') {
+    const normalizedQuery = normalizeText(query).toLowerCase();
+    return getAllPresets().filter((preset) => (
+      !isPresetDisabled(preset.id)
+      && (!normalizedQuery || preset.label.toLowerCase().includes(normalizedQuery))
+    ));
   }
 
   function getTagEntries(tree) {
@@ -1103,11 +1369,23 @@
   function setStatus(root, text, state = 'idle') {
     const status = root.querySelector('[data-role="status"]');
     if (!status) return;
+    clearTimeout(Number(root.dataset.statusClearTimer || 0));
+    delete root.dataset.statusClearTimer;
     status.textContent = text;
     status.dataset.state = state;
   }
 
+  function setTemporaryStatus(root, text, state = 'idle', timeout = 2200) {
+    setStatus(root, text, state);
+    const timer = setTimeout(() => {
+      clearStatus(root);
+    }, timeout);
+    root.dataset.statusClearTimer = String(timer);
+  }
+
   function clearStatus(root) {
+    clearTimeout(Number(root.dataset.statusClearTimer || 0));
+    delete root.dataset.statusClearTimer;
     setStatus(root, '', 'idle');
   }
 
@@ -1116,6 +1394,42 @@
     root.querySelectorAll('[data-action="count"], button[type="submit"]').forEach((button) => {
       button.disabled = isLoading;
     });
+  }
+
+  function showReplaceUndo(root) {
+    const button = root.querySelector('[data-action="undo-replace"]');
+    if (button) button.hidden = false;
+  }
+
+  function hideReplaceUndo(root) {
+    const button = root.querySelector('[data-action="undo-replace"]');
+    if (button) button.hidden = true;
+  }
+
+  function runConstructorUndo() {
+    const api = getTaptopApi();
+    const history = api?.history;
+    const methodNames = ['applyPrev', 'undo', 'back', 'goBack', 'rollback', 'revert', 'previous', 'prev'];
+
+    for (const name of methodNames) {
+      const method = history?.[name];
+      if (typeof method !== 'function') continue;
+      try {
+        method.call(history);
+        return true;
+      } catch {}
+    }
+
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+    const undoButton = buttons.find((button) => {
+      if (!(button instanceof HTMLElement) || !isVisible(button) || button.closest(`.${ROOT_CLASS}`)) return false;
+      const text = normalizeText(`${button.textContent || ''} ${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''}`);
+      return /(undo|отменить|отмена)/i.test(text) && !/(redo|повтор|вернуть)/i.test(text);
+    });
+
+    if (!undoButton) return false;
+    undoButton.click();
+    return true;
   }
 
   function waitForPaint() {
@@ -1128,6 +1442,7 @@
     cleanupCanvasOverlay(false);
     activeCanvasOverlay = createCanvasOverlay(values.scope);
     activeCanvasOverlay?.start();
+    if (!dryRun) hideReplaceUndo(root);
     setLoading(root, true);
     setStatus(root, dryRun ? 'Ищем...' : 'Заменяем...', 'loading');
     await waitForPaint();
@@ -1138,7 +1453,12 @@
       const result = await replaceInCanvas(values.find, values.replace, values.regex, dryRun, values.scope);
       await minimumLoading;
       if (root.dataset.searchRunToken !== runToken) return;
-      setStatus(root, result.message, result.ok ? 'success' : 'error');
+      if (result.ok && !dryRun) {
+        setTemporaryStatus(root, result.message, 'success');
+        if (result.count > 0) showReplaceUndo(root);
+      } else {
+        setStatus(root, result.message, result.ok ? 'success' : 'error');
+      }
     } catch (error) {
       if (root.dataset.searchRunToken !== runToken) return;
       setStatus(root, error?.message || 'Не удалось выполнить поиск', 'error');
@@ -1158,13 +1478,44 @@
     });
   }
 
+  function closePresetDropdowns() {
+    document.querySelectorAll(`.${ROOT_CLASS}`).forEach((root) => {
+      root.classList.remove('is-preset-dropdown-open');
+      root.querySelector('[data-action="toggle-preset-dropdown"]')?.setAttribute('aria-expanded', 'false');
+      const menu = root.querySelector('[data-role="preset-dropdown-menu"]');
+      if (menu) menu.hidden = true;
+      const search = root.querySelector('[data-role="preset-search"]');
+      if (search) search.value = '';
+    });
+  }
+
+  function closeFloatingPopovers() {
+    document.querySelectorAll(`.${ROOT_CLASS}`).forEach((root) => {
+      root.classList.remove('is-save-popover-open', 'is-preset-settings-open');
+      const savePopover = root.querySelector('[data-role="save-template-popover"]');
+      if (savePopover) savePopover.hidden = true;
+      const settingsPopover = root.querySelector('[data-role="preset-settings-popover"]');
+      if (settingsPopover) settingsPopover.hidden = true;
+    });
+  }
+
   function closePanels(exceptRoot = null) {
     document.querySelectorAll(`.${ROOT_CLASS}`).forEach((root) => {
       if (root === exceptRoot) return;
       root.classList.remove(PANEL_OPEN_CLASS);
+      root.classList.remove('is-save-popover-open');
+      root.classList.remove('is-preset-settings-open');
+      root.classList.remove('is-preset-dropdown-open');
+      const savePopover = root.querySelector('[data-role="save-template-popover"]');
+      if (savePopover) savePopover.hidden = true;
+      const presetSettingsPopover = root.querySelector('[data-role="preset-settings-popover"]');
+      if (presetSettingsPopover) presetSettingsPopover.hidden = true;
+      const presetDropdownMenu = root.querySelector('[data-role="preset-dropdown-menu"]');
+      if (presetDropdownMenu) presetDropdownMenu.hidden = true;
       root.querySelector('[data-role="trigger"]')?.setAttribute('aria-expanded', 'false');
       delete root.dataset.searchRunToken;
       setLoading(root, false);
+      hideReplaceUndo(root);
       clearStatus(root);
       cleanupCanvasOverlay(false);
     });
@@ -1182,19 +1533,36 @@
         <div class="tt-search-replace__border-loader" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <button type="button" class="tt-search-replace__close" data-action="close-panel" aria-label="Закрыть">${closeIcon()}</button>
         <div class="tt-search-replace__title">Поиск и замена</div>
-        <label>
-          <span>Шаблон</span>
-          <select name="preset">
-            ${presetOptionsHtml()}
-          </select>
-        </label>
+        <div class="tt-search-replace__preset-label">
+          <span class="tt-search-replace__label-row">
+            <span>Шаблон</span>
+            <span class="tt-search-replace__template-note" data-role="template-save-note"></span>
+          </span>
+          <span class="tt-search-replace__preset-control">
+            <span class="tt-search-replace__preset-dropdown" data-role="preset-dropdown">
+              <button type="button" class="tt-search-replace__preset-trigger" data-action="toggle-preset-dropdown" aria-haspopup="listbox" aria-expanded="false">
+                <span data-role="preset-selected">Пользовательский шаблон</span>
+                <span class="tt-search-replace__preset-arrow" aria-hidden="true"></span>
+              </button>
+              <span class="tt-search-replace__preset-menu" data-role="preset-dropdown-menu" hidden>
+                <input type="text" class="tt-search-replace__preset-search" data-role="preset-search" placeholder="Поиск по шаблонам">
+                <span class="tt-search-replace__preset-options" data-role="preset-options"></span>
+              </span>
+              <input type="hidden" name="preset" value="">
+            </span>
+            <button type="button" class="tt-search-replace__preset-settings" data-action="open-preset-settings" title="Настроить шаблоны" aria-label="Настроить шаблоны">${settingsIcon()}</button>
+          </span>
+          <div class="tt-search-replace__preset-settings-popover" data-role="preset-settings-popover" hidden>
+            <div class="tt-search-replace__preset-settings-list" data-role="preset-settings-list"></div>
+          </div>
+        </div>
         <label>
           <span>Найти</span>
-          <textarea name="find" rows="2" placeholder='например: "([^"]+)"'></textarea>
+          <textarea name="find" rows="2" placeholder='например: Текст или "([^"]+)"'></textarea>
         </label>
         <label>
           <span>Заменить на</span>
-          <textarea name="replace" rows="2" placeholder='например: «$1»'></textarea>
+          <textarea name="replace" rows="2" placeholder="например: Новый текст или «$1»"></textarea>
         </label>
         <details class="tt-search-replace__scope">
           <summary>Ограничить поиск</summary>
@@ -1211,8 +1579,21 @@
           <label><input type="checkbox" name="regex"> <span>.* регулярка</span></label>
         </div>
         <div class="tt-search-replace__actions">
-          <button type="button" data-action="count">Найти</button>
-          <button type="submit" data-primary="1">Заменить</button>
+          <div class="tt-search-replace__actions-main">
+            <button type="button" data-action="count">Найти</button>
+            <button type="submit" data-primary="1">Заменить</button>
+            <button type="button" class="tt-search-replace__undo-replace" data-action="undo-replace" title="Отменить замену" aria-label="Отменить замену" hidden>${undoIcon()}</button>
+          </div>
+          <div class="tt-search-replace__save-wrap">
+            <button type="button" class="tt-search-replace__save-template" data-action="open-save-template" title="Сохранить как шаблон" aria-label="Сохранить как шаблон">${saveIcon()}</button>
+            <div class="tt-search-replace__save-popover" data-role="save-template-popover" hidden>
+              <label>
+                <span>Заголовок шаблона</span>
+                <input type="text" name="templateTitle" placeholder="Например: Кавычки в заголовках">
+              </label>
+              <button type="button" data-action="save-template-submit">Сохранить</button>
+            </div>
+          </div>
         </div>
         <div class="tt-search-replace__status" data-role="status"></div>
       </form>
@@ -1221,6 +1602,12 @@
     const trigger = root.querySelector('[data-role="trigger"]');
     const form = root.querySelector('form');
     const getField = (name) => form.elements.namedItem(name);
+    const presetField = getField('preset');
+    const presetTrigger = root.querySelector('[data-action="toggle-preset-dropdown"]');
+    const presetSearchField = root.querySelector('[data-role="preset-search"]');
+    const presetOptions = root.querySelector('[data-role="preset-options"]');
+    const presetSelected = root.querySelector('[data-role="preset-selected"]');
+    let saveHighlightTimer = 0;
     const getValues = () => ({
       find: String(getField('find')?.value || ''),
       replace: String(getField('replace')?.value || ''),
@@ -1231,13 +1618,222 @@
       }
     });
     const applyPreset = (presetId) => {
-      const preset = PRESETS.find((item) => item.id === presetId);
+      const preset = getPresetById(presetId);
       if (!preset) return;
+      const scope = normalizePresetScope(preset);
       getField('find').value = preset.find;
       getField('replace').value = preset.replace;
       getField('regex').checked = preset.regex;
+      getField('scopeClass').value = scope.className;
+      getField('scopeTags').value = scope.tags;
       setStatus(root, `Шаблон выбран: ${preset.label}`, 'idle');
     };
+    const clearPresetFields = () => {
+      getField('find').value = '';
+      getField('replace').value = '';
+      getField('regex').checked = false;
+      getField('scopeClass').value = '';
+      getField('scopeTags').value = '';
+      clearStatus(root);
+    };
+    const getSelectedPresetLabel = () => getPresetById(presetField?.value)?.label || '';
+    const setPresetValue = (presetId = '') => {
+      const preset = getPresetById(presetId);
+      if (presetField) presetField.value = preset ? preset.id : '';
+      if (presetSelected) {
+        presetSelected.textContent = preset?.label || 'Пользовательский шаблон';
+        presetSelected.title = preset?.label || '';
+      }
+    };
+    const renderPresetDropdownOptions = (query = '') => {
+      if (!presetOptions) return;
+      presetOptions.replaceChildren();
+
+      const customOption = document.createElement('button');
+      customOption.type = 'button';
+      customOption.className = 'tt-search-replace__preset-option';
+      customOption.dataset.presetId = '';
+      customOption.setAttribute('role', 'option');
+      customOption.textContent = 'Пользовательский шаблон';
+      customOption.classList.toggle('is-selected', !presetField?.value);
+      if (!normalizeText(query)) presetOptions.appendChild(customOption);
+
+      const presets = getSelectablePresets(query);
+      presets.forEach((preset) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'tt-search-replace__preset-option';
+        option.dataset.presetId = preset.id;
+        option.setAttribute('role', 'option');
+        option.textContent = preset.label;
+        option.classList.toggle('is-selected', presetField?.value === preset.id);
+        presetOptions.appendChild(option);
+      });
+
+      if (!presetOptions.children.length) {
+        const empty = document.createElement('span');
+        empty.className = 'tt-search-replace__preset-empty';
+        empty.textContent = 'Ничего не найдено';
+        presetOptions.appendChild(empty);
+      }
+    };
+    const refreshPresetSelect = (selectedId = presetField?.value || '') => {
+      const selectableIds = new Set(getSelectablePresets().map((preset) => preset.id));
+      setPresetValue(selectableIds.has(selectedId) ? selectedId : '');
+      renderPresetDropdownOptions(presetSearchField?.value || '');
+    };
+    const closeSavePopover = () => {
+      root.classList.remove('is-save-popover-open');
+      const popover = root.querySelector('[data-role="save-template-popover"]');
+      if (popover) popover.hidden = true;
+    };
+    const closePresetDropdown = () => {
+      root.classList.remove('is-preset-dropdown-open');
+      const menu = root.querySelector('[data-role="preset-dropdown-menu"]');
+      if (menu) menu.hidden = true;
+      presetTrigger?.setAttribute('aria-expanded', 'false');
+      if (presetSearchField) presetSearchField.value = '';
+      renderPresetDropdownOptions('');
+    };
+    const openPresetDropdown = () => {
+      const menu = root.querySelector('[data-role="preset-dropdown-menu"]');
+      if (!menu) return;
+      closeSavePopover();
+      closePresetSettings();
+      renderPresetDropdownOptions('');
+      menu.hidden = false;
+      root.classList.add('is-preset-dropdown-open');
+      presetTrigger?.setAttribute('aria-expanded', 'true');
+      presetSearchField?.focus?.();
+    };
+    const closePresetSettings = () => {
+      root.classList.remove('is-preset-settings-open');
+      const popover = root.querySelector('[data-role="preset-settings-popover"]');
+      if (popover) popover.hidden = true;
+    };
+    const persistPresetSettings = (message = '') => {
+      savePresetSettings((ok, error) => {
+        if (!ok) {
+          setStatus(root, error || 'Не удалось сохранить настройки шаблонов', 'error');
+          return;
+        }
+        refreshPresetSelect();
+        if (message) setTemporaryStatus(root, message, 'success');
+      });
+    };
+    const renderPresetManager = () => {
+      const list = root.querySelector('[data-role="preset-settings-list"]');
+      if (!list) return;
+      list.replaceChildren();
+
+      getAllPresets().forEach((preset) => {
+        const isCustom = preset.id.startsWith(CUSTOM_PRESET_PREFIX);
+        const row = document.createElement('div');
+        row.className = 'tt-search-replace__preset-row';
+        row.draggable = true;
+        row.dataset.presetId = preset.id;
+
+        const drag = document.createElement('span');
+        drag.className = 'tt-search-replace__preset-drag';
+        drag.setAttribute('aria-hidden', 'true');
+        drag.textContent = '⋮⋮';
+
+        const toggle = document.createElement('label');
+        toggle.className = 'tt-search-replace__preset-toggle';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.action = 'toggle-preset';
+        checkbox.checked = !isPresetDisabled(preset.id);
+        const title = document.createElement('span');
+        title.textContent = preset.label;
+        toggle.append(checkbox, title);
+
+        const deleteButton = document.createElement('button');
+        const deleteTitle = isCustom ? 'Удалить шаблон' : 'Скрыть шаблон';
+        deleteButton.type = 'button';
+        deleteButton.dataset.action = 'delete-preset';
+        deleteButton.title = deleteTitle;
+        deleteButton.setAttribute('aria-label', deleteTitle);
+        deleteButton.innerHTML = trashIcon();
+
+        row.append(drag, toggle, deleteButton);
+        list.appendChild(row);
+      });
+    };
+    const openPresetSettings = () => {
+      const popover = root.querySelector('[data-role="preset-settings-popover"]');
+      if (!popover) return;
+      renderPresetManager();
+      popover.hidden = false;
+      root.classList.add('is-preset-settings-open');
+    };
+    const openSavePopover = () => {
+      const popover = root.querySelector('[data-role="save-template-popover"]');
+      if (!popover) return;
+      closePresetSettings();
+      const titleInput = getField('templateTitle');
+      titleInput.value = getSelectedPresetLabel();
+      popover.hidden = false;
+      root.classList.add('is-save-popover-open');
+      titleInput.focus();
+      titleInput.select();
+    };
+    const showTemplateSaved = () => {
+      const note = root.querySelector('[data-role="template-save-note"]');
+      if (note) note.textContent = 'Сохранено в шаблоны';
+      root.classList.add('is-template-saved');
+      clearTimeout(saveHighlightTimer);
+      saveHighlightTimer = setTimeout(() => {
+        root.classList.remove('is-template-saved');
+        if (note) note.textContent = '';
+      }, 1800);
+    };
+    const saveCurrentTemplate = () => {
+      const label = normalizeText(getField('templateTitle')?.value || '');
+      const values = getValues();
+      if (!label) {
+        setStatus(root, 'Введите заголовок шаблона', 'error');
+        getField('templateTitle')?.focus?.();
+        return;
+      }
+      if (!values.find) {
+        setStatus(root, 'Введите текст для поиска', 'error');
+        getField('find')?.focus?.();
+        return;
+      }
+
+      const preset = {
+        id: `${CUSTOM_PRESET_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        label,
+        find: values.find,
+        replace: values.replace,
+        regex: values.regex,
+        scope: values.scope
+      };
+
+      const previousPresets = customPresets;
+      customPresets = [preset, ...customPresets].slice(0, 50);
+      saveCustomPresets((ok, message) => {
+        if (!ok) {
+          customPresets = previousPresets;
+          setStatus(root, message || 'Не удалось сохранить шаблон', 'error');
+          return;
+        }
+
+        if (presetSearchField) presetSearchField.value = '';
+        refreshPresetSelect(preset.id);
+        closeSavePopover();
+        renderPresetManager();
+        showTemplateSaved();
+        setTemporaryStatus(root, `Шаблон сохранен: ${label}`, 'success');
+      });
+    };
+
+    refreshPresetSelect();
+    loadPresetState(() => {
+      refreshPresetSelect();
+      renderPresetManager();
+    });
 
     trigger.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -1258,6 +1854,9 @@
     });
 
     root.querySelector('[data-action="close-panel"]').addEventListener('click', () => {
+      closeSavePopover();
+      closePresetDropdown();
+      closePresetSettings();
       closeMenus();
       closePanels();
     });
@@ -1267,9 +1866,159 @@
       runSearch(root, values, true);
     });
 
-    getField('preset').addEventListener('change', (event) => {
-      applyPreset(event.target.value);
-      getField('find')?.focus?.();
+    root.querySelector('[data-action="undo-replace"]').addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      hideReplaceUndo(root);
+      if (!runConstructorUndo()) setTemporaryStatus(root, 'Не удалось вызвать отмену конструктора', 'error');
+    });
+
+    presetTrigger?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (root.classList.contains('is-preset-dropdown-open')) closePresetDropdown();
+      else openPresetDropdown();
+    });
+
+    presetSearchField?.addEventListener('input', () => {
+      renderPresetDropdownOptions(presetSearchField.value);
+    });
+
+    presetSearchField?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePresetDropdown();
+        presetTrigger?.focus?.();
+        return;
+      }
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const firstOption = presetOptions?.querySelector('.tt-search-replace__preset-option');
+      if (!firstOption) return;
+      const id = firstOption.dataset.presetId || '';
+      setPresetValue(id);
+      closePresetDropdown();
+      if (id) applyPreset(id);
+      else clearPresetFields();
+    });
+
+    presetOptions?.addEventListener('click', (event) => {
+      const option = event.target?.closest?.('.tt-search-replace__preset-option');
+      if (!option) return;
+      const id = option.dataset.presetId || '';
+      setPresetValue(id);
+      closePresetDropdown();
+      if (id) applyPreset(id);
+      else clearPresetFields();
+    });
+
+    root.querySelector('[data-action="open-preset-settings"]').addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSavePopover();
+      closePresetDropdown();
+      if (root.classList.contains('is-preset-settings-open')) closePresetSettings();
+      else openPresetSettings();
+    });
+
+    const presetSettingsList = root.querySelector('[data-role="preset-settings-list"]');
+    presetSettingsList?.addEventListener('change', (event) => {
+      const checkbox = event.target;
+      if (!(checkbox instanceof HTMLInputElement) || checkbox.dataset.action !== 'toggle-preset') return;
+      const row = checkbox.closest('[data-preset-id]');
+      const id = row?.dataset?.presetId || '';
+      if (!id) return;
+      setPresetDisabled(id, !checkbox.checked);
+      persistPresetSettings(checkbox.checked ? 'Шаблон включен' : 'Шаблон отключен');
+    });
+
+    presetSettingsList?.addEventListener('click', (event) => {
+      const button = event.target?.closest?.('[data-action="delete-preset"]');
+      if (!button) return;
+      const row = button.closest('[data-preset-id]');
+      const id = row?.dataset?.presetId || '';
+      if (!id) return;
+
+      if (id.startsWith(CUSTOM_PRESET_PREFIX)) {
+        const previousPresets = customPresets;
+        const previousSettings = presetSettings;
+        deleteCustomPreset(id);
+        saveCustomPresets((customOk, customError) => {
+          if (!customOk) {
+            customPresets = previousPresets;
+            presetSettings = previousSettings;
+            setStatus(root, customError || 'Не удалось удалить шаблон', 'error');
+            return;
+          }
+          savePresetSettings((settingsOk, settingsError) => {
+            if (!settingsOk) setStatus(root, settingsError || 'Не удалось сохранить настройки шаблонов', 'error');
+            renderPresetManager();
+            refreshPresetSelect();
+            if (settingsOk) setTemporaryStatus(root, 'Шаблон удален', 'success');
+            else setStatus(root, 'Шаблон удален', 'error');
+          });
+        });
+        return;
+      }
+
+      setPresetDisabled(id, true);
+      renderPresetManager();
+      persistPresetSettings('Шаблон скрыт');
+    });
+
+    let draggedPresetId = '';
+    presetSettingsList?.addEventListener('dragstart', (event) => {
+      const row = event.target?.closest?.('[data-preset-id]');
+      draggedPresetId = row?.dataset?.presetId || '';
+      if (!draggedPresetId) return;
+      row.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedPresetId);
+    });
+
+    presetSettingsList?.addEventListener('dragover', (event) => {
+      if (!draggedPresetId) return;
+      event.preventDefault();
+      const targetRow = event.target?.closest?.('[data-preset-id]');
+      if (!targetRow || targetRow.dataset.presetId === draggedPresetId) return;
+      const draggedRow = presetSettingsList.querySelector(`[data-preset-id="${draggedPresetId}"]`);
+      if (!draggedRow) return;
+      const rect = targetRow.getBoundingClientRect();
+      const before = event.clientY < rect.top + rect.height / 2;
+      presetSettingsList.insertBefore(draggedRow, before ? targetRow : targetRow.nextSibling);
+    });
+
+    presetSettingsList?.addEventListener('dragend', () => {
+      if (!draggedPresetId) return;
+      presetSettingsList.querySelector('.is-dragging')?.classList.remove('is-dragging');
+      draggedPresetId = '';
+      setPresetOrder(Array.from(presetSettingsList.querySelectorAll('[data-preset-id]')).map((row) => row.dataset.presetId));
+      persistPresetSettings('Порядок шаблонов сохранен');
+    });
+
+    root.querySelector('[data-action="open-save-template"]').addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      closePresetDropdown();
+      closePresetSettings();
+      if (root.classList.contains('is-save-popover-open')) closeSavePopover();
+      else openSavePopover();
+    });
+
+    root.querySelector('[data-action="save-template-submit"]').addEventListener('click', (event) => {
+      event.preventDefault();
+      saveCurrentTemplate();
+    });
+
+    getField('templateTitle')?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveCurrentTemplate();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSavePopover();
+      }
     });
 
     form.addEventListener('submit', (event) => {
@@ -1278,7 +2027,18 @@
       runSearch(root, values, false);
     });
 
-    form.addEventListener('click', (event) => event.stopPropagation());
+    form.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!target?.closest?.('[data-role="preset-dropdown"]')) closePresetDropdown();
+      if (
+        !target?.closest?.('[data-role="preset-settings-popover"]')
+        && !target?.closest?.('[data-action="open-preset-settings"]')
+      ) {
+        closePresetSettings();
+      }
+      if (!target?.closest?.('.tt-search-replace__save-wrap')) closeSavePopover();
+      event.stopPropagation();
+    });
     return root;
   }
 
@@ -1324,6 +2084,8 @@
   function onDocumentClick(event) {
     if (event.target?.closest?.(`.${ROOT_CLASS}`)) return;
     closeMenus();
+    closePresetDropdowns();
+    closeFloatingPopovers();
   }
 
   function onKeyDown(event) {
