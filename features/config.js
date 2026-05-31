@@ -86,21 +86,6 @@ const featuresConfig = {
         js: ["features/layers/selected-layer-visibility-toggles.js"],
         deinit: "features/layers/selected-layer-visibility-toggles.deinit.js",
         reloadRequired: true
-      },
-      crossProjectClipboard: {
-        label: "Копирование слоёв между проектами",
-        js: ["features/layers/cross-project-clipboard.js"],
-        isolated_js: ["features/layers/cross-project-clipboard-bridge.js"],
-        deinit: "features/layers/cross-project-clipboard.deinit.js",
-        isolated_deinit: "features/layers/cross-project-clipboard-bridge.deinit.js",
-        reloadRequired: true
-      },
-      jsonTransfer: {
-        label: "Экспорт/импорт слоёв JSON",
-        css: ["features/layers/json-transfer.css"],
-        js: ["features/layers/json-transfer.js"],
-        deinit: "features/layers/json-transfer.deinit.js",
-        reloadRequired: true
       }
     }
   },
@@ -119,6 +104,28 @@ const featuresConfig = {
           "features/layers/script-widget.deinit.js",
           "features/layers/embed-context-menu.js"
         ],
+        reloadRequired: true
+      }
+    }
+  },
+  features: {
+    name: "Фичи",
+    options: {
+      crossProjectClipboard: {
+        label: "Копирование слоёв между проектами",
+        storageKey: "uiLayers_crossProjectClipboard",
+        js: ["features/layers/cross-project-clipboard.js"],
+        isolated_js: ["features/layers/cross-project-clipboard-bridge.js"],
+        deinit: "features/layers/cross-project-clipboard.deinit.js",
+        isolated_deinit: "features/layers/cross-project-clipboard-bridge.deinit.js",
+        reloadRequired: true
+      },
+      jsonTransfer: {
+        label: "Экспорт/импорт слоёв JSON",
+        storageKey: "uiLayers_jsonTransfer",
+        css: ["features/layers/json-transfer.css"],
+        js: ["features/layers/json-transfer.js"],
+        deinit: "features/layers/json-transfer.deinit.js",
         reloadRequired: true
       }
     }
