@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TapTop Mini Browser</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-topbar">
+    <nav class="sidepanel-tabs" data-role="tabs" aria-label="Вкладки Side Panel"></nav>
+    <div class="sidepanel-top-actions">
+      <button type="button" class="sidepanel-action" data-action="bookmarks-home" aria-label="Открыть закладки">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 2.6 2.83 5.74 6.33.92-4.58 4.46 1.08 6.3L12 17.04l-5.66 2.98 1.08-6.3-4.58-4.46 6.33-.92L12 2.6Z"/></svg>
+      </button>
+    </div>
+  </div>
+  <header class="sidepanel-bar">
+    <button type="button" class="sidepanel-action" data-action="reload" aria-label="Обновить">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.45 10.9h-2.13A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h8V3l-3.35 3.35Z"/></svg>
+    </button>
+    <form class="sidepanel-address" data-role="address">
+      <div class="sidepanel-address-field">
+        <input type="text" class="sidepanel-address-input" data-role="address-input" autocomplete="off" spellcheck="false" placeholder="Введите адрес страницы" aria-label="Адрес страницы">
+        <div class="sidepanel-address-actions">
+          <div class="sidepanel-bookmark-control">
+            <button type="button" class="sidepanel-action sidepanel-bookmark-toggle" data-action="bookmark" aria-label="Добавить в закладки">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 2.6 2.83 5.74 6.33.92-4.58 4.46 1.08 6.3L12 17.04l-5.66 2.98 1.08-6.3-4.58-4.46 6.33-.92L12 2.6Z"/></svg>
+            </button>
+            <div class="sidepanel-bookmark-popup is-hidden" data-role="bookmark-popup">
+              <div class="sidepanel-bookmark-title-field">
+                <input type="text" class="sidepanel-bookmark-title-input" data-role="bookmark-title-input" placeholder=" ">
+                <span class="sidepanel-bookmark-title-label">Название закладки</span>
+              </div>
+              <div class="sidepanel-bookmark-folder-list" data-role="bookmark-popup-folders"></div>
+              <div class="sidepanel-bookmark-folder-form">
+                <input type="text" class="sidepanel-bookmark-folder-input" data-role="bookmark-folder-input" placeholder="Новая папка">
+                <button type="button" class="sidepanel-bookmark-folder-create" data-action="bookmark-folder-create" aria-hidden="true" tabindex="-1">Создать</button>
+              </div>
+            </div>
+          </div>
+          <div class="sidepanel-device-control">
+            <button type="button" class="sidepanel-action" data-action="mobile-view" aria-label="Выбрать устройство">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 3v14h10V5H7Zm4 15v1h2v-1h-2Z"/></svg>
+            </button>
+            <span class="sidepanel-device-label" data-role="device-label"></span>
+            <div class="sidepanel-device-menu is-hidden" data-role="device-menu"></div>
+          </div>
+          <button type="button" class="sidepanel-action" data-action="window" aria-label="Открыть как окно браузера">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 4v8h16V9H4Zm0-2v1h16V7H4Z"/></svg>
+          </button>
+          <button type="button" class="sidepanel-action" data-action="external" aria-label="Открыть в новой вкладке">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h7v2H7v10h10v-5h2v7H5V5Z"/></svg>
+          </button>
+        </div>
+        <div class="sidepanel-suggestions is-hidden" data-role="suggestions">
+          <div class="sidepanel-suggestions-col" data-list="history">
+            <div class="sidepanel-suggestions-title">История</div>
+            <div class="sidepanel-suggestions-list"></div>
+          </div>
+          <div class="sidepanel-suggestions-col" data-list="pinned">
+            <div class="sidepanel-suggestions-title">Закрепленные</div>
+            <div class="sidepanel-suggestions-list"></div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </header>
+  <main class="sidepanel-body">
+    <section class="sidepanel-home" data-role="home">
+      <div class="sidepanel-home-section">
+        <div class="sidepanel-home-title">История</div>
+        <div class="sidepanel-link-list" data-role="history"></div>
+      </div>
+    </section>
+    <section class="sidepanel-bookmarks is-hidden" data-role="bookmarks-home">
+      <div class="sidepanel-home-section">
+        <div class="sidepanel-home-title">Последние закладки</div>
+        <div class="sidepanel-link-list" data-role="bookmarks-recent"></div>
+      </div>
+      <div class="sidepanel-home-section">
+        <div class="sidepanel-home-title">Папки</div>
+        <div class="sidepanel-folder-list" data-role="bookmark-folders"></div>
+      </div>
+    </section>
+    <section class="sidepanel-folder-view is-hidden" data-role="folder-view">
+      <header class="sidepanel-folder-view-head">
+        <button type="button" class="sidepanel-action" data-action="folder-back" aria-label="Назад">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m10.83 12 4.58 4.59L14 18l-6-6 6-6 1.41 1.41L10.83 12Z"/></svg>
+        </button>
+        <div class="sidepanel-folder-view-title" data-role="folder-title">Папка</div>
+      </header>
+      <div class="sidepanel-link-list" data-role="folder-links"></div>
+    </section>
+    <iframe class="sidepanel-frame" title="Mini Browser"></iframe>
+  </main>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

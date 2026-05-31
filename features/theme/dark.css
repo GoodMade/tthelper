@@ -1,0 +1,362 @@
+/* Темная тема для конструктора taptop.pro */
+
+/* Основные переменные темной темы */
+:root {
+  /* Цвета текста */
+  --text-color-main: #e5e5e5;
+  --label-text-color: #9c9c9c;
+  --text-color-secondary: #c6c8cc;
+  
+  /* Фоны */
+  --panel-background: #1e1e1e;
+  --panel-background-secondary: #252729;
+  --canvas-background: #0c0c0c;
+  
+  /* Границы */
+  --panel-border-color: #3c3f41;
+  --panel-border-color-active: #3290ff;
+  
+  /* Акцентные цвета сохраняем */
+  --color-scheme1: #3290ff;
+  --color-scheme2: #58a5ff;
+  --color-scheme3: #2a81e9;
+}
+
+/* Глобальные элементы */
+body {
+  background-color: #1e1e1e;
+  color: #e5e5e5;
+}
+
+/* Попапы и модальные окна */
+.tt-popup,
+.custom-date-picker,
+.right-panel-popup__inner,
+.tt-universal-modal {
+  background: #252729;
+  border-color: #3c3f41;
+  color: #e5e5e5;
+}
+
+.tt-popup__title {
+  background: #1e1e1e;
+  border-bottom-color: #3c3f41;
+  color: #e5e5e5;
+}
+
+.tt-popup__body {
+  background: #252729;
+  color: #9c9c9c;
+}
+
+/* Поля ввода */
+.tt-input-text__input,
+.tt-textarea__textarea {
+  background-color: #1e1e1e;
+  color: #e5e5e5;
+  border-color: #3c3f41;
+}
+
+.tt-input-text__label-wrap,
+.tt-textarea__label {
+  --input-text-background-default: #1e1e1e;
+  --input-text-background-white: #252729;
+  --input-text-border-default: #3c3f41;
+  --textarea-background-default: #1e1e1e;
+  --textarea-background-white: #252729;
+  --textarea-border-default: #3c3f41;
+  background-color: #1e1e1e;
+}
+
+.tt-input-text__input::placeholder,
+.tt-textarea__textarea::placeholder {
+  color: #6a6a6a;
+}
+
+/* Кнопки */
+.tt-button--appearance-gray {
+  --background-default: #1e1e1e;
+  --background-hover: #3c3f41;
+  --background-active: #3c3f41;
+  --text-color-default: #e5e5e5;
+  --text-color-hover: #e5e5e5;
+  --text-color-active: #e5e5e5;
+  --border-default: #3c3f41;
+  --border-hover: #3c3f41;
+}
+
+.tt-button--appearance-light-blue {
+  --background-default: #252729;
+  --background-hover: #3c3f41;
+  --background-active: #3c3f41;
+  --text-color-default: #e5e5e5;
+  --text-color-hover: #e5e5e5;
+  --text-color-active: #e5e5e5;
+}
+
+/* Dropdown и селекты */
+.tt-dropdown {
+  background: #1e1e1e;
+  border-color: #3c3f41;
+  color: #e5e5e5;
+}
+
+.tt-dropdown__selected {
+  color: #e5e5e5;
+}
+
+.tt-dropdown-list,
+.tt-input-picker-list,
+.tt-button-picker-list,
+.tt-option-list-popup {
+  background: #252729;
+}
+
+.tt-dropdown-option,
+.tt-input-picker-option,
+.tt-button-picker-option__value,
+.tt-option-list-item {
+  color: #e5e5e5;
+}
+
+.tt-dropdown-option__divider,
+.tt-input-picker-option__divider,
+.tt-option-list-item__divider {
+  background: #3c3f41;
+}
+
+/* Меню */
+.tt-menu,
+.tt-multi-level-menu,
+.tt-context-menu__popup {
+  background: #252729;
+}
+
+.tt-menu-item,
+.tt-multi-level-menu__item-button,
+.tt-context-menu-item {
+  color: #e5e5e5;
+}
+
+.tt-menu-item__divider,
+.tt-multi-level-menu__divider {
+  background: #3c3f41;
+}
+
+/* Badge */
+.tt-badge--appearance-secondary {
+  background-color: #3c3f41;
+  color: #9c9c9c;
+}
+
+.tt-badge--appearance-secondary.tt-badge--button:hover {
+  background-color: #3c3f41;
+}
+
+/* Табы */
+.tt-tabs__button {
+  color: #9c9c9c;
+}
+
+.tt-tabs__button--active,
+.tt-tabs__button:hover {
+  color: #e5e5e5;
+}
+
+/* Scrollbar */
+.tt-scrollable__thumb-horizontal,
+.tt-scrollable__thumb-vertical {
+  background-color: #6a6a6a;
+}
+
+/* Code Editor */
+.tt-code-editor .ace_editor.ace-kuroir {
+  background: #1e1e1e;
+}
+
+.tt-code-editor .ace_editor.ace-kuroir .ace_gutter {
+  background: #1e1e1e;
+  border-right-color: #3c3f41;
+}
+
+.tt-code-editor .ace_editor.ace-kuroir .ace_gutter-cell {
+  color: #9c9c9c;
+}
+
+.tt-code-editor .ace_editor.ace-kuroir .ace_gutter-cell.ace_gutter-active-line {
+  color: #e5e5e5;
+}
+
+.tt-code-editor .ace_editor.ace-kuroir .ace_marker-layer .ace_active-line {
+  background: #3c3f41;
+  border-color: #3290ff;
+}
+
+/* Picker для цветов */
+.tt-color-picker__popup {
+  background: #252729;
+}
+
+.tt-picker__grid {
+  background-color: #3c3f41;
+}
+
+/* Date Picker */
+.custom-date-picker .rmdp-header {
+  background: #1e1e1e;
+  border-bottom-color: #3c3f41;
+}
+
+.custom-date-picker .rmdp-header .rmdp-header-values {
+  color: #e5e5e5;
+}
+
+.custom-date-picker .rmdp-day {
+  color: #e5e5e5;
+}
+
+.custom-date-picker .rmdp-week .rmdp-week-day {
+  color: #9c9c9c;
+}
+
+/* Effects и Animation */
+.tt-effect-item {
+  border-color: #3c3f41;
+  color: #e5e5e5;
+}
+
+.tt-effect-item:hover {
+  border-color: #3290ff;
+}
+
+.tt-effect-item__description {
+  color: #9c9c9c;
+}
+
+/* Collection fields */
+.tt-collections-fields__delimiter {
+  border-bottom-color: #3c3f41;
+}
+
+.popup-collection__field-label-top,
+.popup-collection__field-label-text {
+  color: #e5e5e5;
+}
+
+.popup-collection__field-label-text.is-checkbox,
+.popup-collection__field-label-text.is-icon {
+  color: #9c9c9c;
+}
+
+.popup-collection__field-label-text.is-opened {
+  color: #e5e5e5;
+}
+
+/* Disabled Overlay */
+.tt-disabled-overlay {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.tt-disabled-overlay__dialog {
+  background-color: #252729;
+  color: #e5e5e5;
+}
+
+/* Breakpoints */
+.tt-breakpoints {
+  background-color: #3c3f41;
+}
+
+/* Styles Block */
+.tt-styles-block--border {
+  border-bottom-color: #3c3f41;
+}
+
+/* Titles и заголовки */
+.tt-title-helper {
+  color: #9c9c9c;
+}
+
+.tt-title-helper--active,
+.tt-title-helper:hover {
+  color: #e5e5e5;
+}
+
+/* Helper Tooltip */
+.tt-helper-tooltip__body {
+  background: #252729;
+  color: #e5e5e5;
+}
+
+.tt-helper-tooltip__body:after {
+  background: #252729;
+}
+
+/* Swatches */
+.tt-swatches-editor:before {
+  background-color: #3c3f41;
+}
+
+.tt-swatches-group {
+  border-top-color: #3c3f41;
+}
+
+.tt-swatches__item {
+  background: #1e1e1e;
+}
+
+/* Input Group */
+.tt-input-group:hover {
+  border-color: #3c3f41;
+}
+
+.tt-input-group:focus-within {
+  border-color: #3290ff;
+}
+
+/* Tag Layout */
+.tag-layout__handle-area--size .tag-layout__badge-item__badge {
+  background: #3290ff;
+}
+
+/* Animation Context Menu */
+.tt-animation-context-menu {
+  background: #252729;
+}
+
+/* Дополнительные элементы интерфейса */
+.tt-input-picker__chip-container {
+  background-color: #1e1e1e;
+}
+
+.tt-dropdown-picker-popup {
+  background: #252729;
+}
+
+.tt-dropdown-picker-popup__input {
+  background: transparent;
+  color: #e5e5e5;
+}
+
+.tt-dropdown-picker-popup__input .tt-input-text__icon {
+  color: #e5e5e5;
+}
+
+.tt-dropdown-picker-popup .tt-input-picker-list {
+  background: transparent;
+  border-top-color: #3c3f41;
+  border-bottom-color: #3c3f41;
+}
+
+/* Toast уведомления */
+.tt-toast--type-info,
+.tt-toast--type-preloader {
+  background-color: #252729;
+}
+
+/* Адаптация для светлых элементов на темном фоне */
+.tt-badge--appearance-white,
+.tt-badge--appearance-white:hover {
+  background-color: #3c3f41;
+  color: #e5e5e5;
+}

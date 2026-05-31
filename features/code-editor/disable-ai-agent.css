@@ -1,0 +1,27 @@
+.tt-popup-code-editor-ai,
+.tt-popup-code-editor-note {
+  display: none !important;
+}
+
+.tt-popup-code-editor__inner,
+.tt-popup-code-editor__body,
+.tt-popup-code-editor__editor,
+.tt-popup-code-editor-code,
+.tt-popup-code-editor-code__body,
+.tt-popup-code-editor-code__code,
+.tt-code-editor {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+.tt-popup-code-editor-code > .tt-popup-code-editor-section-head {
+  display: none !important;
+}
+
+.tt-popup-code-editor__modal .tt-popup__body,
+.tt-popup-code-editor__modal .tt-popup__body > div,
+.tt-popup-code-editor__modal .tt-scrollable__container {
+  max-height: none !important;
+}

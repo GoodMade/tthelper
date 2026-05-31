@@ -1,0 +1,170 @@
+/* Кнопка в правом блоке заголовка панели */
+.tt-layers-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #1f252b;
+}
+.tt-layers-search-toggle:hover,
+.tt-layers-search-toggle.is-active {
+  background: #e7e9ec;
+}
+.tt-layers-search-toggle svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.layers_search_area[hidden],
+.layers_saved_queries[hidden] {
+  display: none !important;
+}
+
+/* Поле поиска */
+.layers_search_area {
+  padding: 6px 8px;
+}
+.layers_search_area input[type="text"] {
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #c7cbd4;
+  border-radius: 4px;
+  outline: none;
+  font: 12px/1.2 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+}
+.layers_search_area input[type="text"]::placeholder { color: #9aa0a6; }
+
+/* Подсветка совпадений */
+.tt-layers__item .tt-layers__item__text mark {
+  background: #ffe08a;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Текущий фокус результата */
+.tt-layers__item.tt-layers__item--hit-current {
+  outline: 2px solid #66a3ff;
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+
+
+/* Контейнер поля с крестиком */
+.layers_search_area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.layers_search_area .layers_search_input {
+  flex: 1 1 auto;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #c7cbd4;
+  border-radius: 4px;
+  outline: none;
+  font: 12px/1.2 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+}
+.layers_search_area .layers_search_clear {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d0d4db;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+.layers_search_area .layers_search_clear:hover { background: #f6f7f9; }
+
+/* Сохранённые запросы (chips) */
+.layers_saved_queries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+.layers_saved_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border: 1px solid #d0d4db;
+  border-radius: 12px;
+  background: #fff;
+  font: 11px/1.2 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  color: #222;
+  cursor: pointer;
+}
+.layers_saved_chip:hover { background: #f6f7f9; }
+.layers_saved_chip .chip_remove {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #e6e9ef;
+  color: #444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.layers_saved_chip .chip_remove:hover { background: #d6dae3; }
+
+
+.layers_search_area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  position: relative
+}
+.layers_search_btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #d0d4db;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+.layers_search_btn:hover { background: #f6f7f9; }
+
+/* Кнопки по умолчанию скрыты */
+.layers_search_clear,
+.layers_search_add { position: absolute; top:auto; bottom: auto; right:10px; }
+.layers_search_add { right:40px; }
+
+.layers_search_area:not(.has-value) .layers_search_clear,
+.layers_search_area:not(.has-value) .layers_search_add { display: none !important; opacity: 0; }
+
+/* Когда поле непустое — показываем обе */
+.layers_search_area.has-value .layers_search_clear,
+.layers_search_area.has-value .layers_search_add { display: inline-flex; opacity: 1 }
+
+.tt-layers__item.tt-layers__item--hit { background: rgba(255,224,138,0.18); }
+.tt-layers__item.tt-layers__item--hit-current { outline: 2px solid #66a3ff; outline-offset: -2px; border-radius: 3px; }

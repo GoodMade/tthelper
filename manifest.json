@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "TapTop Helper",
+  "version": "1.3",
+  "description": "Улучшения интерфейса и функционала для конструктора taptop.pro",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "declarativeNetRequest",
+    "tabs",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "gemini_frame_rules",
+        "enabled": false,
+        "path": "rules/gemini-frame-rules.json"
+      }
+    ]
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["features/*", "features/*/*"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ]
+}
