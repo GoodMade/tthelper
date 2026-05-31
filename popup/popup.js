@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'browser-tabs-option__toggle';
-        toggle.setAttribute('aria-label', tab.active ? 'Отключить вкладку' : 'Включить вкладку');
+        toggle.setAttribute('aria-label', tab.active ? 'Отключить ссылку' : 'Включить ссылку');
 
         const fields = document.createElement('div');
         fields.className = 'browser-tabs-option__fields';
@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         url.placeholder = 'https://example.com';
 
         function commitField() {
-          tab.title = name.value.trim() || tab.title || 'Новая вкладка';
+          tab.title = name.value.trim() || tab.title || 'Новая ссылка';
           tab.url = normalizeUrl(url.value);
           save();
         }
@@ -602,9 +602,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addBtn.addEventListener('click', () => {
       const tab = {
         id: createTabId(),
-        title: 'Новая вкладка',
+        title: 'Новая ссылка',
         url: '',
-        active: true,
+        active: false,
         custom: true
       };
       tabs.push(tab);

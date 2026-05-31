@@ -127,6 +127,18 @@ const featuresConfig = {
         js: ["features/layers/json-transfer.js"],
         deinit: "features/layers/json-transfer.deinit.js",
         reloadRequired: true
+      },
+      searchReplace: {
+        label: "Поиск и замена текста на холсте",
+        tooltip: "Добавляет меню в правую панель для поиска и замены текста, включая регулярные выражения.",
+        storageKey: "rightPanelInterface_searchReplace",
+        css: ["features/right-panel/search-replace.css"],
+        js: ["features/right-panel/search-replace.js"],
+        isolated_js: ["features/right-panel/search-replace-storage-bridge.js"],
+        deinit: "features/right-panel/search-replace.deinit.js",
+        isolated_deinit: "features/right-panel/search-replace-storage-bridge.deinit.js",
+        defaultValue: true,
+        reloadRequired: false
       }
     }
   },
@@ -174,17 +186,6 @@ const featuresConfig = {
         storageKey: "units_dvhHeight",
         js: ["features/units/dvh-height.js"],
         reloadRequired: true
-      },
-      searchReplace: {
-        label: "Поиск и замена текста на холсте",
-        tooltip: "Добавляет меню в правую панель для поиска и замены текста, включая регулярные выражения.",
-        css: ["features/right-panel/search-replace.css"],
-        js: ["features/right-panel/search-replace.js"],
-        isolated_js: ["features/right-panel/search-replace-storage-bridge.js"],
-        deinit: "features/right-panel/search-replace.deinit.js",
-        isolated_deinit: "features/right-panel/search-replace-storage-bridge.deinit.js",
-        defaultValue: true,
-        reloadRequired: false
       }
     }
   },
@@ -193,7 +194,7 @@ const featuresConfig = {
     options: {
       pinnedTabs: {
         type: "browserTabs",
-        label: "Закрепленные вкладки браузера",
+        label: "Закрепленные ссылки",
         storageKey: "miniBrowser_pinnedTabs",
         css: ["features/mini-browser/browser-panel.css"],
         isolated_js: ["features/mini-browser/browser-panel.js"],
