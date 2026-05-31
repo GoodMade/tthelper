@@ -70,9 +70,15 @@ const featuresConfig = {
         reloadRequired: true
       },
       embedContextMenuEdit: {
-        label: "Кнопка «Редактировать» рядом с выделенным embed-слоем",
-        js: ["features/layers/embed-context-menu.js"],
-        deinit: "features/layers/embed-context-menu.deinit.js",
+        label: "Кнопка Редактировать рядом с выделеным embed слоем",
+        js: [
+          "features/layers/embed-context-menu-edit.init.js",
+          "features/layers/embed-context-menu.js"
+        ],
+        deinit: [
+          "features/layers/embed-context-menu-edit.deinit.js",
+          "features/layers/embed-context-menu.js"
+        ],
         reloadRequired: true
       },
       selectedLayerVisibilityToggles: {
@@ -94,6 +100,25 @@ const featuresConfig = {
         css: ["features/layers/json-transfer.css"],
         js: ["features/layers/json-transfer.js"],
         deinit: "features/layers/json-transfer.deinit.js",
+        reloadRequired: true
+      }
+    }
+  },
+  widgets: {
+    name: "Виджеты",
+    options: {
+      scriptWidget: {
+        label: "Виджет Script",
+        tooltip: "Embed слой с  подготовленными тегами script и style",
+        fallbackStorageKey: "uiLayers_embedContextMenuEdit",
+        js: [
+          "features/layers/script-widget.init.js",
+          "features/layers/embed-context-menu.js"
+        ],
+        deinit: [
+          "features/layers/script-widget.deinit.js",
+          "features/layers/embed-context-menu.js"
+        ],
         reloadRequired: true
       }
     }

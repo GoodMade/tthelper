@@ -653,9 +653,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.id = storageKey;
-        cb.checked = Object.prototype.hasOwnProperty.call(settings, storageKey)
-          ? !!settings[storageKey]
-          : !!option.defaultValue;
+        const storedValue = Object.prototype.hasOwnProperty.call(settings, storageKey)
+          ? settings[storageKey]
+          : option.fallbackStorageKey && Object.prototype.hasOwnProperty.call(settings, option.fallbackStorageKey)
+            ? settings[option.fallbackStorageKey]
+            : option.defaultValue;
+        cb.checked = !!storedValue;
 
         cb.addEventListener('change', (e) => {
           const value = e.target.checked;

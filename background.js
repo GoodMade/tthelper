@@ -272,9 +272,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 
 function getOptionValue(settings, storageKey, option) {
-  return Object.prototype.hasOwnProperty.call(settings, storageKey)
-    ? settings[storageKey]
-    : option.defaultValue;
+  if (Object.prototype.hasOwnProperty.call(settings, storageKey)) return settings[storageKey];
+  if (option.fallbackStorageKey && Object.prototype.hasOwnProperty.call(settings, option.fallbackStorageKey)) {
+    return settings[option.fallbackStorageKey];
+  }
+  return option.defaultValue;
 }
 
 function isOptionEnabled(option, value) {
