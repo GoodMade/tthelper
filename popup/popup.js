@@ -4,9 +4,329 @@ document.addEventListener('DOMContentLoaded', () => {
   const headerMenuBtn = document.getElementById('header-menu-btn');
   const headerMenuDropdown = document.getElementById('header-menu-dropdown');
   const headerMenu = headerMenuBtn?.closest('.header-menu');
+  const exportStateBtn = document.getElementById('export-state-btn');
+  const importStateBtn = document.getElementById('import-state-btn');
+  const importStateInput = document.getElementById('import-state-input');
+  const BACKUP_SCHEMA = 'taptop-helper-state-backup';
+  const BACKUP_VERSION = 1;
   let hasLocalReloadChange = false;
   let activeHelp = null;
   let activeHelpKey = '';
+
+  function getLastError() {
+    try {
+      return chrome.runtime.lastError || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getStorageArea(name) {
+    try {
+      return chrome?.storage?.[name] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function getObjectSize(value) {
+    return isPlainObject(value) ? Object.keys(value).length : 0;
+  }
+
+  function readStorageArea(name) {
+    const area = getStorageArea(name);
+    if (!area) return Promise.resolve(null);
+
+    return new Promise((resolve, reject) => {
+      try {
+        area.get(null, (items) => {
+          const error = getLastError();
+          if (error) {
+            reject(new Error(error.message || `Не удалось прочитать chrome.storage.${name}`));
+            return;
+          }
+          resolve(items || {});
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  function replaceStorageArea(name, items) {
+    const area = getStorageArea(name);
+    if (!area || !isPlainObject(items)) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const finishClear = () => {
+        const error = getLastError();
+        if (error) {
+          reject(new Error(error.message || `Не удалось очистить chrome.storage.${name}`));
+          return;
+        }
+
+        const keys = Object.keys(items);
+        if (!keys.length) {
+          resolve();
+          return;
+        }
+
+        area.set(items, () => {
+          const setError = getLastError();
+          if (setError) {
+            reject(new Error(setError.message || `Не удалось записать chrome.storage.${name}`));
+            return;
+          }
+          resolve();
+        });
+      };
+
+      try {
+        area.clear(finishClear);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  function dumpWebStorage(storage) {
+    const result = {};
+    if (!storage) return result;
+
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key == null) continue;
+      result[key] = storage.getItem(key);
+    }
+
+    return result;
+  }
+
+  function restoreWebStorage(storage, items, shouldClear) {
+    if (!storage || !isPlainObject(items)) return 0;
+    if (shouldClear) storage.clear();
+
+    let count = 0;
+    Object.entries(items).forEach(([key, value]) => {
+      storage.setItem(key, value == null ? '' : String(value));
+      count += 1;
+    });
+
+    return count;
+  }
+
+  function getExtensionLocalStorage() {
+    try {
+      return dumpWebStorage(window.localStorage);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function replaceExtensionLocalStorage(items) {
+    try {
+      restoreWebStorage(window.localStorage, items, true);
+    } catch (e) {}
+  }
+
+  function getActiveTab() {
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        resolve(tabs && tabs[0] ? tabs[0] : null);
+      });
+    });
+  }
+
+  function canReadPageStorage(tab) {
+    return !!tab?.id && /^https?:\/\//i.test(tab.url || '');
+  }
+
+  async function readActivePageStorage() {
+    const tab = await getActiveTab();
+    if (!canReadPageStorage(tab)) {
+      return {
+        available: false,
+        reason: tab?.url ? 'Недоступный тип вкладки' : 'Нет активной вкладки',
+        tabUrl: tab?.url || ''
+      };
+    }
+
+    try {
+      const frames = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          function dump(storage) {
+            const result = {};
+            for (let i = 0; i < storage.length; i += 1) {
+              const key = storage.key(i);
+              if (key == null) continue;
+              result[key] = storage.getItem(key);
+            }
+            return result;
+          }
+
+          return {
+            available: true,
+            url: location.href,
+            origin: location.origin,
+            localStorage: dump(localStorage),
+            sessionStorage: dump(sessionStorage)
+          };
+        }
+      });
+
+      return frames?.[0]?.result || {
+        available: false,
+        reason: 'Страница не вернула данные',
+        tabUrl: tab.url || ''
+      };
+    } catch (error) {
+      return {
+        available: false,
+        reason: error?.message || 'Не удалось прочитать storage страницы',
+        tabUrl: tab.url || ''
+      };
+    }
+  }
+
+  async function restoreActivePageStorage(pageStorage) {
+    if (!isPlainObject(pageStorage) || !pageStorage.available) return null;
+
+    const tab = await getActiveTab();
+    if (!canReadPageStorage(tab)) {
+      throw new Error('Откройте страницу TapTop перед импортом storage страницы.');
+    }
+
+    const activeOrigin = new URL(tab.url).origin;
+    if (pageStorage.origin && pageStorage.origin !== activeOrigin) {
+      const ok = confirm(
+        `В файле есть storage страницы ${pageStorage.origin}, а текущая вкладка открыта на ${activeOrigin}. Импортировать данные страницы в текущую вкладку?`
+      );
+      if (!ok) return null;
+    }
+
+    const frames = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [pageStorage],
+      func: (storedPageStorage) => {
+        function isObject(value) {
+          return !!value && typeof value === 'object' && !Array.isArray(value);
+        }
+
+        function restore(storage, items) {
+          if (!storage || !isObject(items)) return 0;
+
+          let count = 0;
+          Object.entries(items).forEach(([key, value]) => {
+            storage.setItem(key, value == null ? '' : String(value));
+            count += 1;
+          });
+          return count;
+        }
+
+        return {
+          localStorage: restore(localStorage, storedPageStorage.localStorage),
+          sessionStorage: restore(sessionStorage, storedPageStorage.sessionStorage),
+          origin: location.origin,
+          url: location.href
+        };
+      }
+    });
+
+    return frames?.[0]?.result || null;
+  }
+
+  function downloadJson(payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `taptop-helper-backup-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function exportState() {
+    try {
+      const [sync, local, session, activePage] = await Promise.all([
+        readStorageArea('sync'),
+        readStorageArea('local'),
+        readStorageArea('session'),
+        readActivePageStorage()
+      ]);
+
+      downloadJson({
+        schema: BACKUP_SCHEMA,
+        version: BACKUP_VERSION,
+        createdAt: new Date().toISOString(),
+        extension: {
+          id: chrome.runtime.id,
+          name: chrome.runtime.getManifest().name,
+          version: chrome.runtime.getManifest().version
+        },
+        chromeStorage: { sync, local, session },
+        extensionLocalStorage: getExtensionLocalStorage(),
+        activePage
+      });
+    } catch (error) {
+      alert(error?.message || 'Не удалось экспортировать настройки и историю.');
+    }
+  }
+
+  function normalizeBackup(data) {
+    if (!isPlainObject(data)) {
+      throw new Error('Файл импорта должен быть JSON-объектом.');
+    }
+
+    if (data.schema !== BACKUP_SCHEMA) {
+      throw new Error('Это не файл бэкапа TapTop Helper.');
+    }
+
+    if (!isPlainObject(data.chromeStorage)) {
+      throw new Error('В файле нет данных chrome.storage.');
+    }
+
+    return data;
+  }
+
+  async function importState(file) {
+    if (!file) return;
+
+    try {
+      const data = normalizeBackup(JSON.parse(await file.text()));
+      const syncCount = getObjectSize(data.chromeStorage.sync);
+      const localCount = getObjectSize(data.chromeStorage.local);
+      const sessionCount = getObjectSize(data.chromeStorage.session);
+      const pageCount = getObjectSize(data.activePage?.localStorage) + getObjectSize(data.activePage?.sessionStorage);
+      const ok = confirm(
+        `Импорт заменит chrome.storage расширения из файла:\n\nsync: ${syncCount}\nlocal: ${localCount}\nsession: ${sessionCount}\nstorage текущей страницы: ${pageCount}\n\nПродолжить?`
+      );
+
+      if (!ok) return;
+
+      await replaceStorageArea('sync', data.chromeStorage.sync);
+      await replaceStorageArea('local', data.chromeStorage.local);
+      await replaceStorageArea('session', data.chromeStorage.session);
+
+      if (isPlainObject(data.extensionLocalStorage)) {
+        replaceExtensionLocalStorage(data.extensionLocalStorage);
+      }
+
+      await restoreActivePageStorage(data.activePage);
+
+      alert('Импорт завершен. Popup сейчас обновится; открытую страницу TapTop лучше перезагрузить.');
+      window.location.reload();
+    } catch (error) {
+      alert(error?.message || 'Не удалось импортировать настройки и историю.');
+    }
+  }
 
   function updateApplyVisibility(pendingReload) {
     applyBtn.style.display = pendingReload ? 'inline-block' : 'none';
@@ -410,6 +730,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     headerMenuDropdown.addEventListener('click', () => closeHeaderMenu());
   }
+
+  exportStateBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    exportState();
+  });
+
+  importStateBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    importStateInput?.click();
+  });
+
+  importStateInput?.addEventListener('change', () => {
+    const file = importStateInput.files?.[0] || null;
+    importState(file);
+    importStateInput.value = '';
+  });
 
   document.addEventListener('click', (event) => {
     if (!headerMenu || headerMenu.contains(event.target)) return;
