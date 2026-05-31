@@ -14,11 +14,13 @@
 
   const DEBOUNCE_MS = 140;
   const USER_SCROLL_GRACE = 900;
+  const EXPAND_WAIT_MS = 90;
 
   let hits = [];
   let index = -1;
   let cache = [];
   let raf = 0;
+  let navigationBusy = false;
 
   let searchInputEl = null;
   let currentQuery = '';
@@ -133,12 +135,7 @@
 
 		const allowAuto = forceScroll || (Date.now() > userScrollUntil);
 		if (allowAuto) {
-		  if (!scroller) item.scrollIntoView({ block: 'center', behavior: 'auto' });
-		  else {
-			const s = scroller.getBoundingClientRect();
-			const r = item.getBoundingClientRect();
-			scroller.scrollTo({ top: r.top - s.top + scroller.scrollTop - 16, behavior: 'auto' });
-		  }
+		  scrollHitIntoView(item, scroller);
 		}
 
 		if (wasInput && !hasUserSelection && searchInputEl) {
@@ -153,6 +150,217 @@
 	if (!q) return [];
 	const ql = q.toLowerCase();
 	return cache.filter(n => n.textLower.includes(ql));
+  }
+
+  function scrollHitIntoView(item, scroller) {
+	if (!scroller) {
+	  item.scrollIntoView({ block: 'center', behavior: 'auto' });
+	  return;
+	}
+
+	const scrollerRect = scroller.getBoundingClientRect();
+	const itemRect = item.getBoundingClientRect();
+	const itemTop = scroller.scrollTop + itemRect.top - scrollerRect.top;
+	const targetTop = itemTop - ((scrollerRect.height - itemRect.height) / 2);
+
+	scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' });
+  }
+
+  function getItemIndent(entryOrEl) {
+	const el = entryOrEl?.el || entryOrEl;
+	const textEl = entryOrEl?.textEl || el?.querySelector?.(TEXT_SELECTOR);
+	const rect = (textEl || el)?.getBoundingClientRect?.();
+	return rect ? rect.left : 0;
+  }
+
+  function getCacheIndex(el) {
+	return cache.findIndex((entry) => entry.el === el);
+  }
+
+  function itemHasVisibleDescendants(item) {
+	const parentIndex = getCacheIndex(item);
+	if (parentIndex === -1) return false;
+	const next = cache[parentIndex + 1];
+	if (!next) return false;
+	return item.contains(next.el) || getItemIndent(next) > getItemIndent(cache[parentIndex]) + 4;
+  }
+
+  function isVisibleElement(el) {
+	if (!(el instanceof Element)) return false;
+	const rect = el.getBoundingClientRect();
+	const style = getComputedStyle(el);
+	return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  }
+
+  function classText(el) {
+	return String(el?.getAttribute?.('class') || '').toLowerCase();
+  }
+
+  function isExpandedByState(el) {
+	if (!el) return false;
+	if (el.getAttribute?.('aria-expanded') === 'true') return true;
+	const text = classText(el);
+	return /\b(is-|_)?(open|opened|expanded)\b/.test(text);
+  }
+
+  function findLayerToggle(item, opts = {}) {
+	const { collapsedOnly = true } = opts;
+	if (!(item instanceof Element)) return null;
+	if (collapsedOnly && itemHasVisibleDescendants(item)) return null;
+
+	const ownExpanded = item.getAttribute?.('aria-expanded');
+	if (ownExpanded === 'false') return item;
+	if (collapsedOnly && ownExpanded === 'true') return null;
+
+	const explicit = item.querySelector('[aria-expanded], [data-state="closed"], [data-open="false"], [data-collapsed="true"]');
+	if (explicit) {
+	  if (!collapsedOnly || explicit.getAttribute?.('aria-expanded') !== 'true') return explicit;
+	}
+	if (collapsedOnly && isExpandedByState(item)) return null;
+
+	const textEl = item.querySelector(TEXT_SELECTOR);
+	if (!textEl) return null;
+	const textRect = textEl.getBoundingClientRect();
+	const rowCenter = textRect.top + (textRect.height / 2);
+	const expectedX = textRect.left - 58;
+	const elements = Array.from(item.querySelectorAll('button, [role="button"], svg, span, i, div'));
+
+	const candidates = elements
+	  .filter((el) => el !== textEl && !textEl.contains(el) && isVisibleElement(el))
+	  .filter((el) => {
+		const rect = el.getBoundingClientRect();
+		const centerY = rect.top + (rect.height / 2);
+		return Math.abs(centerY - rowCenter) <= 18
+		  && rect.right <= textRect.left - 20
+		  && rect.width <= 28
+		  && rect.height <= 28;
+	  })
+	  .sort((a, b) => {
+		const aClass = /arrow|chevron|caret|toggle|expand|collapse/.test(classText(a)) ? -100 : 0;
+		const bClass = /arrow|chevron|caret|toggle|expand|collapse/.test(classText(b)) ? -100 : 0;
+		const aRect = a.getBoundingClientRect();
+		const bRect = b.getBoundingClientRect();
+		const aDist = Math.abs((aRect.left + aRect.width / 2) - expectedX) + aClass;
+		const bDist = Math.abs((bRect.left + bRect.width / 2) - expectedX) + bClass;
+		return aDist - bDist;
+	  });
+
+	const candidate = candidates[0];
+	if (candidate) return candidate.closest('button, [role="button"], [aria-expanded]') || candidate;
+
+	const pointTarget = document.elementFromPoint(expectedX, rowCenter);
+	if (!pointTarget || !item.contains(pointTarget) || pointTarget === item || pointTarget === textEl || textEl.contains(pointTarget)) return null;
+	const rect = pointTarget.getBoundingClientRect();
+	if (rect.width > 28 || rect.height > 28 || rect.right > textRect.left - 20) return null;
+	return pointTarget.closest('button, [role="button"], [aria-expanded]') || pointTarget;
+  }
+
+  function clickLayerToggle(toggle) {
+	if (!(toggle instanceof Element)) return;
+	toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+  }
+
+  function waitForLayerTreeUpdate() {
+	return new Promise((resolve) => {
+	  requestAnimationFrame(() => setTimeout(resolve, EXPAND_WAIT_MS));
+	});
+  }
+
+  function refreshSearchState(q) {
+	const { list } = getRoots();
+	if (list) {
+	  listRef = list;
+	  buildCache(list);
+	}
+	runSearchNow(q);
+  }
+
+  function makeItemSnapshot(item) {
+	const entry = cache.find((node) => node.el === item);
+	return {
+	  index: entry ? cache.indexOf(entry) : -1,
+	  indent: getItemIndent(entry || item),
+	  textLower: entry?.textLower || item.querySelector?.(TEXT_SELECTOR)?.textContent?.toLowerCase?.() || ''
+	};
+  }
+
+  function findRefreshedItem(snapshot) {
+	if (!snapshot?.textLower) return null;
+	let best = null;
+	let bestScore = Infinity;
+	cache.forEach((entry, entryIndex) => {
+	  if (entry.textLower !== snapshot.textLower) return;
+	  const score = Math.abs(entryIndex - snapshot.index) + (Math.abs(getItemIndent(entry) - snapshot.indent) / 24);
+	  if (score < bestScore) {
+		best = entry.el;
+		bestScore = score;
+	  }
+	});
+	return best;
+  }
+
+  function findFirstMatchingDescendant(parent, q) {
+	const parentIndex = getCacheIndex(parent);
+	if (parentIndex === -1) return null;
+	const ql = (q || '').trim().toLowerCase();
+	if (!ql) return null;
+
+	const parentIndent = getItemIndent(cache[parentIndex]);
+	for (let i = parentIndex + 1; i < cache.length; i += 1) {
+	  const entry = cache[i];
+	  const isNested = parent.contains(entry.el);
+	  const isIndented = getItemIndent(entry) > parentIndent + 4;
+	  if (!isNested && !isIndented) break;
+	  if (entry.textLower.includes(ql)) return entry.el;
+	}
+	return null;
+  }
+
+  function gotoElementHit(el, fallbackIndex, q) {
+	const hitIndex = hits.findIndex((hit) => hit.el === el);
+	gotoHit(hitIndex === -1 ? fallbackIndex : hitIndex, q, { forceScroll: true });
+  }
+
+  async function navigateForward(q) {
+	if (navigationBusy || !hits.length) return;
+	navigationBusy = true;
+	try {
+	  const current = hits[index]?.el || hits[0]?.el;
+	  const toggle = findLayerToggle(current, { collapsedOnly: true });
+
+	  if (current && toggle) {
+		const snapshot = makeItemSnapshot(current);
+		const beforeCount = cache.length;
+
+		clickLayerToggle(toggle);
+		await waitForLayerTreeUpdate();
+		refreshSearchState(q);
+
+		const parent = current.isConnected ? current : findRefreshedItem(snapshot);
+		const parentHitIndex = parent ? hits.findIndex((hit) => hit.el === parent) : -1;
+		if (parentHitIndex !== -1) index = parentHitIndex;
+		const child = parent ? findFirstMatchingDescendant(parent, q) : null;
+		if (child) {
+		  gotoElementHit(child, index + 1, q);
+		  searchInputEl?.focus({ preventScroll: true });
+		  return;
+		}
+
+		if (parent && cache.length > beforeCount) {
+		  const restoreToggle = findLayerToggle(parent, { collapsedOnly: false });
+		  clickLayerToggle(restoreToggle);
+		  await waitForLayerTreeUpdate();
+		  refreshSearchState(q);
+		  const restoredParentHitIndex = hits.findIndex((hit) => hit.el === parent);
+		  if (restoredParentHitIndex !== -1) index = restoredParentHitIndex;
+		}
+	  }
+
+	  gotoHit(index + 1, q, { forceScroll: true });
+	  searchInputEl?.focus({ preventScroll: true });
+	} finally {
+	  navigationBusy = false;
+	}
   }
 
   const runSearchNow = (q) => {
@@ -271,7 +479,7 @@ chip.addEventListener('click', (e) => {
 		
 		  // последующие клики по тому же тегу — как Enter: следующий матч по кругу
 		  if (hits.length) {
-			gotoHit(index + 1, tag, { forceScroll: true });
+			navigateForward(tag);
 		  }
 		});
 		
@@ -380,7 +588,6 @@ chip.addEventListener('click', (e) => {
 		btn.addEventListener('click', () => {
 		  const isOpen = bar.hidden;
 		  setSearchOpen(bar, savedWrap, btn, isOpen);
-		  if (isOpen) panel.scrollIntoView({ block: 'nearest' });
 		});
 		r.prepend(btn);
 		setSearchOpen(bar, savedWrap, btn, loadSearchOpen(), { skipSave: true, skipFocus: true });
@@ -405,7 +612,7 @@ chip.addEventListener('click', (e) => {
 	  if (e.key === 'Enter' && !e.shiftKey) {
 		e.preventDefault();
 		if (!hits.length) return;
-		gotoHit(index + 1, input.value, { forceScroll: true });
+		navigateForward(input.value);
 	  } else if (e.key === 'Enter' && e.shiftKey) {
 		e.preventDefault();
 		if (!hits.length) return;
