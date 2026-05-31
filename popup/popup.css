@@ -34,17 +34,24 @@ body.help-open {
   width: 340px;
   min-height: 100vh;
   margin-left: auto;
-  padding: 10px;
+  padding: 0 10px 10px;
   background: var(--tt-bg);
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-height: 32px;
-  margin: 0 0 8px;
+  margin: 0 -10px 8px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(223, 228, 234, 0.9);
+  background: var(--tt-bg);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 h2 {
@@ -52,6 +59,13 @@ h2 {
   font-size: 14px;
   font-weight: 650;
   letter-spacing: 0;
+}
+
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .apply-button {
@@ -75,6 +89,71 @@ h2 {
 .apply-button:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.header-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.header-menu__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tt-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.header-menu__button:hover,
+.header-menu__button:focus-visible,
+.header-menu.is-open .header-menu__button {
+  background: #eef2f7;
+  color: var(--tt-text);
+}
+
+.header-menu__button:focus-visible {
+  outline: 2px solid rgba(25, 118, 210, 0.28);
+  outline-offset: 2px;
+}
+
+.header-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 126px;
+  padding: 5px;
+  border: 1px solid var(--tt-border);
+  border-radius: 7px;
+  background: var(--tt-surface);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.header-menu__dropdown a {
+  display: block;
+  padding: 7px 9px;
+  border-radius: 5px;
+  color: var(--tt-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.header-menu__dropdown a:hover,
+.header-menu__dropdown a:focus-visible {
+  background: #eef6ff;
+  color: var(--tt-primary);
+  outline: 0;
 }
 
 #features-container {

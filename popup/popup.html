@@ -9,7 +9,15 @@
   <main class="popup-main">
     <div class="header">
       <h2>TapTop Helper</h2>
-      <button id="apply-btn" class="apply-button" style="display:none">Применить</button>
+      <div class="header-actions">
+        <button id="apply-btn" class="apply-button" style="display:none">Применить</button>
+        <div class="header-menu">
+          <button id="header-menu-btn" class="header-menu__button" type="button" aria-label="Открыть меню" aria-expanded="false" aria-haspopup="true">⋮</button>
+          <div id="header-menu-dropdown" class="header-menu__dropdown" role="menu" hidden>
+            <a href="https://github.com/GoodMade/tthelper" target="_blank" rel="noopener noreferrer" role="menuitem">Скачать</a>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="features-container"></div>
   </main>
