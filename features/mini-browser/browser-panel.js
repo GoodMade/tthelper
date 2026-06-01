@@ -9,6 +9,7 @@
   const OPEN_KEY = 'tt_enhancer_mini_browser_open';
   const ACTIVE_KEY = 'tt_enhancer_mini_browser_active';
   const PINNED_KEY = 'tt_enhancer_mini_browser_pinned';
+  const SHIFTED_LEFT_KEY = 'tt_enhancer_mini_browser_shifted_left';
   const WIDTH_KEY = 'tt_enhancer_mini_browser_width';
   const LAST_WIDTH_KEY = 'tt_enhancer_mini_browser_last_width';
   const MOBILE_VIEW_KEY = 'tt_enhancer_mini_browser_mobile_view';
@@ -70,6 +71,7 @@
     activeId: '',
     isOpen: false,
     isPinned: true,
+    isShiftedLeft: false,
     isMobileView: false,
     mobileDeviceId: 'default',
     isFitDevice: false,
@@ -243,6 +245,9 @@
     }
     if (name === 'pin-filled') {
       return '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m15.45 3.1 5.45 5.45-3.25 3.25.92 4.6-2.17 2.17-3.95-3.95-5.8 5.8-3.07-3.07 5.8-5.8-3.95-3.95 2.17-2.17 4.6.92 3.25-3.25Z"/></svg>';
+    }
+    if (name === 'shift-left') {
+      return '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7-7-7 7 7 7"/></svg>';
     }
     if (name === 'star') {
       return '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 2.6 2.83 5.74 6.33.92-4.58 4.46 1.08 6.3L12 17.04l-5.66 2.98 1.08-6.3-4.58-4.46 6.33-.92L12 2.6Z"/></svg>';
@@ -418,6 +423,7 @@
       '<div class="tt-enhancer-mini-browser-panel__bar">' +
         '<div class="tt-enhancer-mini-browser-panel__tabs"></div>' +
         '<div class="tt-enhancer-mini-browser-panel__actions">' +
+          '<button type="button" class="tt-enhancer-mini-browser-panel__action" data-action="shift-left" aria-label="Сдвинуть мини браузер влево на 300px">' + iconSvg('shift-left') + '</button>' +
           '<button type="button" class="tt-enhancer-mini-browser-panel__action" data-action="pin-panel" aria-label="Открепить мини браузер">' + iconSvg('pin-filled') + '</button>' +
           '<button type="button" class="tt-enhancer-mini-browser-panel__action" data-action="bookmarks-panel" aria-label="Открыть закладки">' + iconSvg('star') + '</button>' +
           '<button type="button" class="tt-enhancer-mini-browser-panel__action" data-action="sidepanel" aria-label="Открыть в боковой панели Chrome">' + iconSvg('sidepanel') + '</button>' +
@@ -498,6 +504,10 @@
     panel.querySelector('[data-action="pin-panel"]').addEventListener('click', (event) => {
       event.stopPropagation();
       setPinned(!state.isPinned);
+    });
+    panel.querySelector('[data-action="shift-left"]').addEventListener('click', (event) => {
+      event.stopPropagation();
+      setShiftedLeft(!state.isShiftedLeft);
     });
     panel.querySelector('[data-action="resize-panel"]').addEventListener('pointerdown', startPanelResize);
     panel.querySelector('[data-action="resize-panel"]').addEventListener('dblclick', resetPanelWidth);
@@ -859,6 +869,7 @@
     }
     state.panel = panel;
     applyStoredPanelWidth();
+    applyShiftedLeft();
   }
 
   function setOpen(isOpen) {
@@ -878,6 +889,13 @@
     state.isPinned = !!isPinned;
     localSet(PINNED_KEY, state.isPinned ? '1' : '0');
     renderPinButton();
+  }
+
+  function setShiftedLeft(isShiftedLeft) {
+    state.isShiftedLeft = !!isShiftedLeft;
+    localSet(SHIFTED_LEFT_KEY, state.isShiftedLeft ? '1' : '0');
+    applyShiftedLeft();
+    renderShiftLeftButton();
   }
 
   function setMobileView(isMobileView) {
@@ -920,6 +938,18 @@
     button.innerHTML = iconSvg(state.isPinned ? 'pin-filled' : 'pin');
     button.setAttribute('aria-pressed', state.isPinned ? 'true' : 'false');
     button.setAttribute('aria-label', state.isPinned ? 'Открепить мини браузер' : 'Закрепить мини браузер');
+  }
+
+  function applyShiftedLeft() {
+    state.panel?.classList.toggle('is-shifted-left', state.isShiftedLeft);
+  }
+
+  function renderShiftLeftButton() {
+    const button = state.panel?.querySelector('[data-action="shift-left"]');
+    if (!button) return;
+    button.classList.toggle('is-active', state.isShiftedLeft);
+    button.setAttribute('aria-pressed', state.isShiftedLeft ? 'true' : 'false');
+    button.setAttribute('aria-label', state.isShiftedLeft ? 'Вернуть мини браузер назад' : 'Сдвинуть мини браузер влево на 300px');
   }
 
   function renderMobileView() {
@@ -1793,6 +1823,7 @@
     ensureActiveTab();
     renderTabs();
     renderPinButton();
+    renderShiftLeftButton();
     renderMobileView();
     renderFrames();
     syncAddressValue();
@@ -2007,6 +2038,7 @@
   function mount() {
     state.isOpen = localGet(OPEN_KEY, '0') === '1';
     state.isPinned = localGet(PINNED_KEY, '1') !== '0';
+    state.isShiftedLeft = localGet(SHIFTED_LEFT_KEY, '0') === '1';
     state.activeId = localGet(ACTIVE_KEY, '');
     safeChromeCall(() => chrome.storage.sync.get({ [OPEN_SITE_BUTTON_KEY]: false }, (settings) => {
       state.showOpenSiteButton = !!settings[OPEN_SITE_BUTTON_KEY];
