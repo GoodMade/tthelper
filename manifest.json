@@ -45,7 +45,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["features/*", "features/*/*"],
+      "resources": ["features/*", "features/*/*", "widgets_settings/*", "widgets_settings/*/*"],
       "matches": [
         "http://*/*",
         "https://*/*"

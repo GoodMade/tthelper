@@ -4,6 +4,7 @@
   const PAGE_SOURCE = 'tt-enhancer-cross-project-clipboard';
   const BRIDGE_SOURCE = 'tt-enhancer-cross-project-clipboard-bridge';
   const UNIQUE_CLASS_RE = /--u-([a-z0-9]+)$/;
+  const IGNORED_CLASS_CONFLICT_NAMES = new Set(['helper--d-none']);
   const FALLBACK_SYSTEM_CLASS_NAMES = new Set([
     'div',
     'image',
@@ -138,7 +139,7 @@
   function collectUserClassValues(collection) {
     const values = new Set();
     collectClassValues(collection).forEach((value) => {
-      if (!isSystemClassName(value)) values.add(value);
+      if (!isSystemClassName(value) && !IGNORED_CLASS_CONFLICT_NAMES.has(value)) values.add(value);
     });
     return values;
   }

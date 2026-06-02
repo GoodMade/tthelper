@@ -6,6 +6,7 @@
   const ROOT_CLASS = 'tt-layer-json-transfer';
   const SETTINGS_CLASS = 'tt-layer-json-transfer-settings';
   const UNIQUE_CLASS_RE = /--u-([a-z0-9]+)$/;
+  const IGNORED_CLASS_CONFLICT_NAMES = new Set(['helper--d-none']);
   const FALLBACK_SYSTEM_CLASS_NAMES = new Set([
     'div',
     'image',
@@ -25,6 +26,9 @@
 
   let runtimeRequire = null;
   let mountObserver = null;
+  let mountRaf = 0;
+  let isDestroyed = false;
+  const panelTabTimers = new Set();
   let toastTimer = 0;
   let settingsVisibilityTimer = 0;
   let activeConflictDialog = null;
@@ -133,7 +137,7 @@
   function collectUserClassValues(collection) {
     const values = new Set();
     collectClassValues(collection).forEach((value) => {
-      if (!isSystemClassName(value)) values.add(value);
+      if (!isSystemClassName(value) && !IGNORED_CLASS_CONFLICT_NAMES.has(value)) values.add(value);
     });
     return values;
   }
@@ -366,7 +370,7 @@
       type: WRAPPER_TYPE,
       version: 1,
       exportedAt: new Date().toISOString(),
-      sourceUrl: location.href,
+      sourceUrl: '',
       layerName: getLayerName(data),
       clipboardData: data
     };
@@ -466,21 +470,30 @@
     }
   }
 
-  function syncSettingsExportVisibility(panel) {
-    panel.hidden = !hasSelectedLayer();
+  function syncSettingsExportPanel(panel, hasLayer = hasSelectedLayer()) {
+    panel.hidden = !hasLayer;
   }
 
-  function startSettingsExportVisibilitySync(panel) {
-    syncSettingsExportVisibility(panel);
-    settingsVisibilityTimer = setInterval(() => syncSettingsExportVisibility(panel), 250);
+  function syncSettingsExportVisibility() {
+    const hasLayer = hasSelectedLayer();
+    document.querySelectorAll(`.${SETTINGS_CLASS}`).forEach((panel) => {
+      syncSettingsExportPanel(panel, hasLayer);
+    });
+  }
+
+  function startSettingsExportVisibilitySync() {
+    if (settingsVisibilityTimer) return;
+    settingsVisibilityTimer = setInterval(syncSettingsExportVisibility, 250);
   }
 
   function findRightBlock() {
-    const direct = document.querySelector(RIGHT_BLOCK_SELECTOR);
+    const direct = Array.from(document.querySelectorAll(RIGHT_BLOCK_SELECTOR)).find(isVisible)
+      || document.querySelector(RIGHT_BLOCK_SELECTOR);
     if (direct) return direct;
 
     for (const host of document.querySelectorAll('*')) {
-      const found = host.shadowRoot?.querySelector?.(RIGHT_BLOCK_SELECTOR);
+      const found = Array.from(host.shadowRoot?.querySelectorAll?.(RIGHT_BLOCK_SELECTOR) || []).find(isVisible)
+        || host.shadowRoot?.querySelector?.(RIGHT_BLOCK_SELECTOR);
       if (found) return found;
     }
 
@@ -551,17 +564,21 @@
     button.addEventListener('click', exportSelectedLayer);
 
     panel.append(title, button);
-    startSettingsExportVisibilitySync(panel);
+    syncSettingsExportPanel(panel);
+    startSettingsExportVisibilitySync();
     return panel;
   }
 
   function mountSettingsExport() {
-    if (document.querySelector(`.${SETTINGS_CLASS}`)) return true;
-
     const seoBlock = findSeoSettingsBlock();
     if (!seoBlock || !seoBlock.parentElement) return false;
 
-    seoBlock.insertAdjacentElement('afterend', buildSettingsExportPanel());
+    if (!seoBlock.nextElementSibling?.classList?.contains(SETTINGS_CLASS)) {
+      const existingPanel = Array.from(seoBlock.parentElement.children)
+        .find((node) => node.classList?.contains(SETTINGS_CLASS));
+      seoBlock.insertAdjacentElement('afterend', existingPanel || buildSettingsExportPanel());
+    }
+    syncSettingsExportVisibility();
     return true;
   }
 
@@ -574,24 +591,70 @@
     return true;
   }
 
-  const initialTop = mountTopImport();
-  const initialSettings = mountSettingsExport();
-
-  if (!initialTop || !initialSettings) {
-    mountObserver = new MutationObserver(() => {
-      const mountedTop = mountTopImport();
-      const mountedSettings = mountSettingsExport();
-      if (mountedTop && mountedSettings) {
-        mountObserver.disconnect();
-        mountObserver = null;
-      }
-    });
-    mountObserver.observe(document.documentElement, { childList: true, subtree: true });
+  function mountAll() {
+    if (isDestroyed) return;
+    mountTopImport();
+    mountSettingsExport();
+    syncSettingsExportVisibility();
   }
+
+  function scheduleMount() {
+    if (isDestroyed || mountRaf) return;
+    mountRaf = requestAnimationFrame(() => {
+      mountRaf = 0;
+      if (isDestroyed) return;
+      mountAll();
+    });
+  }
+
+  function scheduleDelayedMount(delay) {
+    const timer = setTimeout(() => {
+      panelTabTimers.delete(timer);
+      scheduleMount();
+    }, delay);
+    panelTabTimers.add(timer);
+  }
+
+  function isOwnMountNode(node) {
+    return node instanceof HTMLElement
+      && (
+        node.classList.contains(ROOT_CLASS)
+        || node.classList.contains(SETTINGS_CLASS)
+        || Boolean(node.closest?.(`.${ROOT_CLASS}, .${SETTINGS_CLASS}`))
+      );
+  }
+
+  function onPanelTabClick(event) {
+    const tabButton = event.target?.closest?.('.tt-design-mode-right-panel__button, .tt-tabs__list button, [role="tab"]');
+    if (!tabButton?.closest?.('.tt-right-panel, .tt-design-mode-right-panel, [class*="right-panel"]')) return;
+    scheduleMount();
+    scheduleDelayedMount(120);
+    scheduleDelayedMount(350);
+  }
+
+  mountAll();
+  mountObserver = new MutationObserver((mutations) => {
+    const onlyOwnElements = mutations.every((mutation) => {
+      if (mutation.target instanceof HTMLElement && mutation.target.closest(`.${ROOT_CLASS}, .${SETTINGS_CLASS}`)) {
+        return true;
+      }
+
+      const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
+      return nodes.length && nodes.every(isOwnMountNode);
+    });
+    if (!onlyOwnElements) scheduleMount();
+  });
+  mountObserver.observe(document.documentElement || document.body, { childList: true, subtree: true });
+  document.addEventListener('click', onPanelTabClick, true);
 
   window[STATE_KEY] = {
     destroy() {
+      isDestroyed = true;
       mountObserver?.disconnect?.();
+      if (mountRaf) cancelAnimationFrame(mountRaf);
+      panelTabTimers.forEach((timer) => clearTimeout(timer));
+      panelTabTimers.clear();
+      document.removeEventListener('click', onPanelTabClick, true);
       clearInterval(settingsVisibilityTimer);
       document.querySelectorAll(`.${ROOT_CLASS}`).forEach((node) => node.remove());
       document.querySelectorAll(`.${SETTINGS_CLASS}`).forEach((node) => node.remove());

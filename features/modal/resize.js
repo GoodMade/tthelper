@@ -2,6 +2,10 @@
   const STORAGE_KEY    = 'tt_enhancer_modal_code_editor';
   const SELECTOR_MODAL = '.tt-popup.tt-universal-modal.tt-popup-code-editor__modal';
   const SELECTOR_TITLE = '.tt-popup__title';
+  const MINI_BROWSER_SELECTOR = '#tt-enhancer-mini-browser-panel, #tt-enhancer-mini-browser-button, #tt-enhancer-side-browser-button, #tt-enhancer-open-site-button';
+  const STACK_ACTIVE_CLASS = 'tt-enhancer--stack-active';
+  const STACK_BACKGROUND_CLASS = 'tt-enhancer--stack-background';
+  const MINI_BROWSER_STACK_ACTIVE_CLASS = 'is-stack-active';
   const MIN_MODAL_HEIGHT = 560;
   const DEFAULT_MODAL_HEIGHT = 720;
 
@@ -10,6 +14,10 @@
 	if (prevObserver?.disconnect) prevObserver.disconnect();
 	if (window.__ttEnhancerModalResizeHandler) {
 	  window.removeEventListener('resize', window.__ttEnhancerModalResizeHandler);
+	}
+	if (window.__ttEnhancerModalStackHandler) {
+	  document.removeEventListener('pointerdown', window.__ttEnhancerModalStackHandler, true);
+	  window.__ttEnhancerModalStackHandler = null;
 	}
   } catch {}
 
@@ -86,6 +94,42 @@
 	  target.classList.contains('tt-popup-code-editor-note')
 	);
   }
+  function getMiniBrowserPanel() {
+	return document.getElementById('tt-enhancer-mini-browser-panel');
+  }
+  function bringCodeEditorToFront(modal) {
+	if (!(modal instanceof HTMLElement)) return;
+	modal.classList.add(STACK_ACTIVE_CLASS);
+	modal.classList.remove(STACK_BACKGROUND_CLASS);
+	getMiniBrowserPanel()?.classList.remove(MINI_BROWSER_STACK_ACTIVE_CLASS);
+  }
+  function bringMiniBrowserToFront() {
+	getMiniBrowserPanel()?.classList.add(MINI_BROWSER_STACK_ACTIVE_CLASS);
+	document.querySelectorAll(SELECTOR_MODAL).forEach((modal) => {
+	  modal.classList.remove(STACK_ACTIVE_CLASS);
+	  modal.classList.add(STACK_BACKGROUND_CLASS);
+	});
+  }
+  function handleStackPointerDown(event) {
+	const target = event.target;
+	if (!(target instanceof Element)) return;
+	const modal = target.closest(SELECTOR_MODAL);
+	if (modal) {
+	  bringCodeEditorToFront(modal);
+	  return;
+	}
+	if (target.closest(MINI_BROWSER_SELECTOR)) {
+	  bringMiniBrowserToFront();
+	}
+  }
+  function bindCodeEditorStack(modal) {
+	const ctx = ensureCtx(modal);
+	bringCodeEditorToFront(modal);
+	if (!ctx.stackFocusListener) {
+	  ctx.stackFocusListener = () => bringCodeEditorToFront(modal);
+	  modal.addEventListener('focusin', ctx.stackFocusListener, true);
+	}
+  }
   function observeEditorMode(modal) {
 	const ctx = ensureCtx(modal);
 	if (ctx.modeObserver?.disconnect) ctx.modeObserver.disconnect();
@@ -149,7 +193,11 @@
 
   // ---- enhance ----
   function enhance(modal) {
-	if (!(modal instanceof HTMLElement) || modal.dataset.ttEnhancer) return;
+	if (!(modal instanceof HTMLElement)) return;
+	if (modal.dataset.ttEnhancer) {
+	  bindCodeEditorStack(modal);
+	  return;
+	}
 	modal.dataset.ttEnhancer = '1';
 	const ctx = ensureCtx(modal);
 
@@ -258,6 +306,7 @@
 	// Применяем сохранённое
 	applyState(modal);
 	observeEditorMode(modal);
+	bindCodeEditorStack(modal);
 
 	// Подстраховка после монтирования: Ace часто меряется до финальной высоты контейнера.
 	scheduleResizeBurst(modal);
@@ -290,4 +339,7 @@
   };
   window.__ttEnhancerModalResizeHandler = onWindowResize;
   window.addEventListener('resize', onWindowResize);
+
+  window.__ttEnhancerModalStackHandler = handleStackPointerDown;
+  document.addEventListener('pointerdown', handleStackPointerDown, true);
 })();

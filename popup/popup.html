@@ -8,13 +8,14 @@
 <body>
   <main class="popup-main">
     <div class="header">
-      <h2>TapTop Helper</h2>
+      <h2 class="header-title">TapTop Helper <span id="extension-version" class="header-version" aria-label="Версия расширения"></span></h2>
       <div class="header-actions">
         <button id="apply-btn" class="apply-button" style="display:none">Применить</button>
         <div class="header-menu">
           <button id="header-menu-btn" class="header-menu__button" type="button" aria-label="Открыть меню" aria-expanded="false" aria-haspopup="true">⋮</button>
           <div id="header-menu-dropdown" class="header-menu__dropdown" role="menu" hidden>
             <a href="https://github.com/GoodMade/tthelper" target="_blank" rel="noopener noreferrer" role="menuitem">Скачать</a>
+            <button id="widget-sources-btn" type="button" role="menuitem">Источники виджетов</button>
             <button id="export-state-btn" type="button" role="menuitem">Экспорт настроек и истории</button>
             <button id="import-state-btn" type="button" role="menuitem">Импорт настроек и истории</button>
             <input id="import-state-input" type="file" accept="application/json,.json" hidden>

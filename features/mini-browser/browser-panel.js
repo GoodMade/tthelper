@@ -3,6 +3,10 @@
   const SIDE_BUTTON_ID = 'tt-enhancer-side-browser-button';
   const OPEN_SITE_BUTTON_ID = 'tt-enhancer-open-site-button';
   const PANEL_ID = 'tt-enhancer-mini-browser-panel';
+  const CODE_EDITOR_MODAL_SELECTOR = '.tt-popup.tt-universal-modal.tt-popup-code-editor__modal, .tt-popup-code-editor__modal';
+  const CODE_EDITOR_STACK_ACTIVE_CLASS = 'tt-enhancer--stack-active';
+  const CODE_EDITOR_STACK_BACKGROUND_CLASS = 'tt-enhancer--stack-background';
+  const STACK_ACTIVE_CLASS = 'is-stack-active';
   const STORAGE_KEY = 'miniBrowser_pinnedTabs';
   const OPEN_SITE_BUTTON_KEY = 'miniBrowser_openCurrentSiteTabButton';
   const BOOKMARKS_KEY = 'miniBrowser_bookmarks';
@@ -277,6 +281,14 @@
     });
   }
 
+  function bringMiniBrowserToFront() {
+    state.panel?.classList.add(STACK_ACTIVE_CLASS);
+    document.querySelectorAll(CODE_EDITOR_MODAL_SELECTOR).forEach((modal) => {
+      modal.classList.remove(CODE_EDITOR_STACK_ACTIVE_CLASS);
+      modal.classList.add(CODE_EDITOR_STACK_BACKGROUND_CLASS);
+    });
+  }
+
   function showNotice(text) {
     if (!state.panel) return;
     let notice = state.panel.querySelector('.tt-enhancer-mini-browser-panel__notice');
@@ -417,6 +429,7 @@
     panel.className = 'tt-enhancer-mini-browser-panel';
     panel.setAttribute('aria-label', 'Мини браузер');
     stopTaptopModalEvents(panel);
+    panel.addEventListener('pointerdown', bringMiniBrowserToFront, true);
 
     panel.innerHTML =
       '<div class="tt-enhancer-mini-browser-panel__resize-handle" data-action="resize-panel" aria-hidden="true"></div>' +
@@ -676,6 +689,10 @@
       document.getElementById(OPEN_SITE_BUTTON_ID)?.contains(target)
     );
 
+    if (clickedInsidePanel || clickedExtensionButton) {
+      bringMiniBrowserToFront();
+    }
+
     if (state.bookmarkPopupOpen && !target.closest?.('.tt-enhancer-mini-browser-panel__bookmark-control')) {
       hideBookmarkPopup();
     }
@@ -689,9 +706,12 @@
   }
 
   function handleWindowBlur() {
-    if (!state.bookmarkPopupOpen) return;
     setTimeout(() => {
-      if (document.activeElement?.tagName === 'IFRAME' || !document.hasFocus()) {
+      const activeElement = document.activeElement;
+      if (activeElement?.tagName === 'IFRAME' && state.panel?.contains(activeElement)) {
+        bringMiniBrowserToFront();
+      }
+      if (state.bookmarkPopupOpen && (activeElement?.tagName === 'IFRAME' || !document.hasFocus())) {
         hideBookmarkPopup();
       }
     }, 0);
@@ -880,6 +900,7 @@
     state.button?.classList.toggle('is-active', state.isOpen);
     state.button?.setAttribute('aria-pressed', state.isOpen ? 'true' : 'false');
     if (state.isOpen) {
+      bringMiniBrowserToFront();
       ensureActiveTab();
       renderPanel();
     }

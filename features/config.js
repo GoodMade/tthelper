@@ -59,6 +59,18 @@ const featuresConfig = {
       }
     }
   },
+  canvasInterface: {
+    name: "Интерфейс холста",
+    options: {
+      compactHiddenElementNotice: {
+        label: "Уменьшить панель уведомления о скрытом элементе",
+        css: ["features/canvas/hidden-element-notice-compact.css"],
+        js: ["features/canvas/hidden-element-notice-compact.js"],
+        deinit: "features/canvas/hidden-element-notice-compact.deinit.js",
+        reloadRequired: false
+      }
+    }
+  },
   uiLayers: {
     name: "Интерфейс левой панели",
     options: {
@@ -71,6 +83,7 @@ const featuresConfig = {
       },
       embedContextMenuEdit: {
         label: "Кнопка Редактировать рядом с выделеным embed слоем",
+        disabledOnFreePlan: true,
         js: [
           "features/layers/embed-context-menu-edit.init.js",
           "features/layers/embed-context-menu.js"
@@ -95,6 +108,7 @@ const featuresConfig = {
       scriptWidget: {
         label: "Виджет Script",
         tooltip: "Embed слой с  подготовленными тегами script и style",
+        disabledOnFreePlan: true,
         fallbackStorageKey: "uiLayers_embedContextMenuEdit",
         js: [
           "features/layers/script-widget.init.js",
@@ -104,6 +118,39 @@ const featuresConfig = {
           "features/layers/script-widget.deinit.js",
           "features/layers/embed-context-menu.js"
         ],
+        reloadRequired: true
+      },
+      githubWidgets: {
+        type: "widgetSourcesToggle",
+        label: "Дополнительные виджеты",
+        tooltip: "Добавляет карточки виджетов из TapTop Helper и пользовательских публичных источников.",
+        disabledOnFreePlan: true,
+        storageKey: "widgets_githubWidgets",
+        sourcesStorageKey: "widgets_additionalWidgetSources",
+        sourcesDefaultValue: [
+          {
+            id: "tthelper_data",
+            title: "TapTop Helper",
+            type: "github",
+            url: "https://github.com/GoodMade/tthelper_data/tree/main/widgets",
+            readonly: true
+          }
+        ],
+        css: ["widgets_settings/kineskope/kineskope.css"],
+        js: [
+          "features/widgets/github-widgets.init.js",
+          "features/layers/embed-context-menu.js",
+          "widgets_settings/kineskope/kineskope.js"
+        ],
+        isolated_js: ["features/widgets/github-widgets-bridge.js"],
+        deinit: [
+          "widgets_settings/kineskope/kineskope.deinit.js",
+          "features/widgets/github-widgets.deinit.js",
+          "features/layers/embed-context-menu.js"
+        ],
+        isolated_deinit: "features/widgets/github-widgets-bridge.deinit.js",
+        defaultValue: false,
+        paidDefaultValue: true,
         reloadRequired: true
       }
     }

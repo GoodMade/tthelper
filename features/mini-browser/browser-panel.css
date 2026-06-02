@@ -43,6 +43,10 @@
   transition: transform 0.18s ease;
 }
 
+.tt-enhancer-mini-browser-panel.is-stack-active {
+  z-index: 2147483646;
+}
+
 .tt-enhancer-mini-browser-panel__resize-handle {
   position: absolute;
   top: 0;

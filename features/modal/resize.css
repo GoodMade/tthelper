@@ -26,6 +26,14 @@
   flex-direction: column !important;
 }
 
+.tt-popup-code-editor__modal.tt-enhancer--stack-active {
+  z-index: 2147483646 !important;
+}
+
+.tt-popup-code-editor__modal.tt-enhancer--stack-background {
+  z-index: 2147483590 !important;
+}
+
 .tt-popup-code-editor__modal .tt-popup__title {
   flex: 0 0 auto;
 }

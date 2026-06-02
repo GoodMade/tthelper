@@ -4,6 +4,7 @@
   const INLINE_BUTTON_ATTR = 'data-tt-enhancer-embed-inline-edit';
   const LEGACY_CREATE_SCRIPT_MENU_ATTR = 'data-tt-enhancer-create-script-menu-item';
   const SCRIPT_WIDGET_ATTR = 'data-tt-enhancer-script-widget';
+  const GITHUB_WIDGET_ATTR = 'data-tt-enhancer-github-widget';
   const SCRIPT_DROP_TARGET_ATTR = 'data-tt-enhancer-script-drop-target';
   const SCRIPT_WIDGET_HOVER_OUTLINE_ATTR = 'data-tt-enhancer-script-widget-hover-outline';
   const VISIBILITY_TOGGLES_ATTR = 'data-tt-enhancer-layer-visibility-toggles';
@@ -13,14 +14,26 @@
   const EMBED_WIDGET_TEXT = 'Embed';
   const SVG_ICON_WIDGET_TEXT = 'SVG Icon';
   const SCRIPT_LAYER_NAME = 'script';
+  const SCRIPTS_LAYER_NAME = 'Scripts';
+  const GITHUB_WIDGET_SCRIPT_DATA_NAME = 'widget-script';
   const SCRIPT_TEMPLATE = '<style>\n \n</style>\n\n<script>\n \n</script>';
+  const CLIPBOARD_KEY = 'clipboardData';
+  const LAYER_EXPORT_TYPE = 'taptop-enhancer-layer-export';
   const HELPER_CLASS_NAME = 'helper--d-none';
   const SCRIPT_WIDGET_HOVER_BORDER = '#8fc9ff';
   const WIDGET_PANEL_ANCHORS = ['Link Block', EMBED_WIDGET_TEXT, 'Collection', SVG_ICON_WIDGET_TEXT];
   const FEATURE_FLAGS_KEY = '__ttEnhancerEmbedContextMenuFeatures';
+  const GITHUB_WIDGET_DRAG_TYPE = 'application/x-tt-enhancer-github-widget';
+  const GITHUB_WIDGET_PAGE_SOURCE = 'tt-enhancer-github-widgets';
+  const GITHUB_WIDGET_BRIDGE_SOURCE = 'tt-enhancer-github-widgets-bridge';
+  const GITHUB_WIDGETS_JSDELIVR_INDEX_URL = 'https://data.jsdelivr.com/v1/packages/gh/GoodMade/tthelper_data@main?structure=flat';
+  const GITHUB_WIDGETS_CDN_ROOT = 'https://cdn.jsdelivr.net/gh/GoodMade/tthelper_data@main/widgets';
+  const DEFAULT_GITHUB_WIDGET_SOURCE_ID = 'tthelper_data';
+  const DEFAULT_GITHUB_WIDGET_SOURCE_TITLE = 'TapTop Helper';
   const featureFlags = window[FEATURE_FLAGS_KEY] || { inlineEdit: true, scriptWidget: true };
   const isInlineEditEnabled = featureFlags.inlineEdit !== false;
   const isScriptWidgetEnabled = featureFlags.scriptWidget !== false;
+  const isGithubWidgetsEnabled = featureFlags.githubWidgets === true;
 
   try {
     window.__ttEnhancerEmbedContextMenu?.observer?.disconnect?.();
@@ -34,9 +47,12 @@
     document.removeEventListener('scroll', window.__ttEnhancerEmbedContextMenu?.onViewportChange, true);
     window.removeEventListener('resize', window.__ttEnhancerEmbedContextMenu?.onViewportChange, true);
     window.__ttEnhancerEmbedContextMenu?.clearScriptWidgetExpandTimer?.();
+    window.__ttEnhancerEmbedContextMenu?.clearGithubWidgetTimers?.();
     document.querySelectorAll(`[${INLINE_BUTTON_ATTR}]`).forEach((el) => el.remove());
     document.querySelectorAll(`[${LEGACY_CREATE_SCRIPT_MENU_ATTR}]`).forEach((el) => el.remove());
     document.querySelectorAll(`[${SCRIPT_WIDGET_ATTR}]`).forEach((el) => el.remove());
+    document.querySelectorAll(`[${GITHUB_WIDGET_ATTR}]`).forEach((el) => el.remove());
+    document.querySelectorAll('.tt-enhancer-github-widget-toast').forEach((el) => el.remove());
     document.querySelectorAll(`[${SCRIPT_DROP_TARGET_ATTR}]`).forEach((el) => {
       el.removeAttribute(SCRIPT_DROP_TARGET_ATTR);
       el.style.removeProperty('box-shadow');
@@ -50,6 +66,18 @@
   let scriptWidgetSuppressClickUntil = 0;
   let scriptWidgetDropInProgress = false;
   let scriptWidgetExpandTimer = null;
+  let githubWidgetDragState = null;
+  let githubWidgetLastDropState = null;
+  let githubWidgetSuppressClickUntil = 0;
+  let githubWidgetDropInProgress = false;
+  let githubWidgets = [];
+  let githubWidgetsLoading = false;
+  let githubWidgetsLoaded = false;
+  let githubWidgetsLoadFailed = false;
+  let githubWidgetsLoadRetries = 0;
+  let githubWidgetsRetryTimer = 0;
+  let githubWidgetRequestId = 0;
+  let githubToastTimer = 0;
   let raf = 0;
   let runtimeRequire = null;
 
@@ -134,6 +162,8 @@
 
     try {
       return {
+        clipboard: req(6269)?.A,
+        clipboardStore: req(34369)?.N,
         components: req(90309)?.A,
         constants: req(89224),
         layers: req(39510)?.A,
@@ -384,14 +414,19 @@
     });
   }
 
-  function setNativeWidgetDragState(api = getTaptopApi()) {
-    const widgetCode = getWidgetCode(api);
+  function setNativeWidgetDragState(api = getTaptopApi(), widgetCode = getWidgetCode(api)) {
     const action = getDropWidgetAction(api);
     try {
       api?.runtime?.setDragged?.(widgetCode);
+      api?.clientOverlay?.setMode?.(api?.constants?.D$?.ADD || 'add');
+      api?.clientOverlay?.setAction?.(action);
       api?.layers?.setProp?.('drag', widgetCode);
       api?.layers?.setProp?.('action', action);
     } catch {}
+  }
+
+  function getGithubWidgetDragCode(api = getTaptopApi()) {
+    return api?.constants?.gz?.DIV || 'div';
   }
 
   function clearStaleScriptWidgetDragState(api = getTaptopApi()) {
@@ -616,14 +651,18 @@
     dispatchCssUpdate(api);
   }
 
-  function applyScriptLayerName(api, tag) {
+  function applyLayerName(api, tag, name) {
     const target = getOriginalTag(api, tag);
     if (!target) return;
 
     try {
-      if (typeof target.setName === 'function') target.setName(SCRIPT_LAYER_NAME);
-      else target.name = SCRIPT_LAYER_NAME;
+      if (typeof target.setName === 'function') target.setName(name);
+      else target.name = name;
     } catch {}
+  }
+
+  function applyScriptLayerName(api, tag) {
+    applyLayerName(api, tag, SCRIPT_LAYER_NAME);
   }
 
   function findOpenCodeEditorButton() {
@@ -876,9 +915,10 @@
     const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
     let node = walker.nextNode();
     let replaced = false;
+    const replaceableTexts = [EMBED_WIDGET_TEXT, SVG_ICON_WIDGET_TEXT, SCRIPT_WIDGET_TEXT];
 
     while (node) {
-      if (normalizeText(node.nodeValue) === EMBED_WIDGET_TEXT || normalizeText(node.nodeValue) === SVG_ICON_WIDGET_TEXT) {
+      if (replaceableTexts.includes(normalizeText(node.nodeValue))) {
         node.nodeValue = text;
         replaced = true;
       }
@@ -889,7 +929,7 @@
       const label = Array.from(card.querySelectorAll('span, div'))
         .filter(isVisible)
         .sort((a, b) => normalizeText(a.textContent).length - normalizeText(b.textContent).length)
-        .find((el) => [EMBED_WIDGET_TEXT, SVG_ICON_WIDGET_TEXT].includes(normalizeText(el.textContent)));
+        .find((el) => replaceableTexts.includes(normalizeText(el.textContent)));
       if (label) label.textContent = text;
     }
   }
@@ -1022,6 +1062,782 @@
     }, 0);
   }
 
+  function clearGithubWidgetTimers() {
+    clearTimeout(githubWidgetsRetryTimer);
+    clearTimeout(githubToastTimer);
+    githubWidgetsRetryTimer = 0;
+    githubToastTimer = 0;
+  }
+
+  function showGithubWidgetToast(text, duration = 3200) {
+    clearTimeout(githubToastTimer);
+    document.querySelectorAll('.tt-enhancer-github-widget-toast').forEach((node) => node.remove());
+
+    const toast = document.createElement('div');
+    toast.className = 'tt-enhancer-github-widget-toast';
+    toast.textContent = text;
+    toast.style.cssText = [
+      'position: fixed',
+      'right: 18px',
+      'bottom: 18px',
+      'z-index: 2147482600',
+      'max-width: 320px',
+      'padding: 10px 12px',
+      'border-radius: 6px',
+      'background: rgba(17, 24, 39, 0.94)',
+      'color: #fff',
+      'font: 500 13px/1.35 Inter, Arial, sans-serif',
+      'opacity: 1',
+      'transform: translateY(0)',
+      'transition: opacity 0.16s ease, transform 0.16s ease',
+      'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22)'
+    ].join(';');
+    document.body.appendChild(toast);
+
+    githubToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(6px)';
+      setTimeout(() => toast.remove(), 180);
+    }, duration);
+  }
+
+  function deepCloneJson(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function isValidGithubWidgetName(value) {
+    return /^[a-zA-Z0-9._-]+$/.test(String(value || ''));
+  }
+
+  function normalizeGithubWidgetEntry(widget) {
+    if (typeof widget === 'string') {
+      const name = widget;
+      return {
+        key: `${DEFAULT_GITHUB_WIDGET_SOURCE_ID}::${name}`,
+        name,
+        sourceId: DEFAULT_GITHUB_WIDGET_SOURCE_ID,
+        sourceTitle: DEFAULT_GITHUB_WIDGET_SOURCE_TITLE,
+        sourceType: 'github'
+      };
+    }
+
+    const name = String(widget?.name || '').trim();
+    const sourceId = String(widget?.sourceId || DEFAULT_GITHUB_WIDGET_SOURCE_ID).trim() || DEFAULT_GITHUB_WIDGET_SOURCE_ID;
+    return {
+      key: String(widget?.key || `${sourceId}::${name}`),
+      name,
+      sourceId,
+      sourceTitle: String(widget?.sourceTitle || sourceId),
+      sourceType: widget?.sourceType || 'github'
+    };
+  }
+
+  function getGithubWidgetKey(widget) {
+    return normalizeGithubWidgetEntry(widget).key;
+  }
+
+  function getGithubWidgetFromValue(value) {
+    if (value && typeof value === 'object') return normalizeGithubWidgetEntry(value);
+
+    const raw = String(value || '').trim();
+    return normalizeGithubWidgetEntry(
+      githubWidgets.find((widget) => getGithubWidgetKey(widget) === raw)
+      || githubWidgets.find((widget) => widget.name === raw)
+      || raw
+    );
+  }
+
+  function getGithubRawUrl(widgetName, fileName) {
+    if (!isValidGithubWidgetName(widgetName)) return '';
+    return `${GITHUB_WIDGETS_CDN_ROOT}/${encodeURIComponent(widgetName)}/${encodeURIComponent(fileName)}`;
+  }
+
+  function requestGithubWidgetsBridge(action, payload = {}, timeout = 6000) {
+    const id = `github-widget-${Date.now()}-${githubWidgetRequestId += 1}`;
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        clearInterval(retryTimer);
+        window.removeEventListener('message', onMessage);
+        reject(new Error('GitHub widgets bridge timeout'));
+      }, timeout);
+      const retryTimer = setInterval(postRequest, 180);
+
+      function onMessage(event) {
+        if (event.source !== window) return;
+        const data = event.data;
+        if (!data || data.source !== GITHUB_WIDGET_BRIDGE_SOURCE || data.type !== 'response') return;
+        if (data.id !== id) return;
+
+        clearTimeout(timer);
+        clearInterval(retryTimer);
+        window.removeEventListener('message', onMessage);
+
+        if (data.ok) resolve(data.result);
+        else reject(new Error(data.error || 'GitHub widgets bridge error'));
+      }
+
+      function postRequest() {
+        window.postMessage({
+          source: GITHUB_WIDGET_PAGE_SOURCE,
+          type: 'request',
+          id,
+          action,
+          payload
+        }, '*');
+      }
+
+      window.addEventListener('message', onMessage);
+      postRequest();
+    });
+  }
+
+  async function fetchGithubWidgetListDirect() {
+    const response = await fetch(GITHUB_WIDGETS_JSDELIVR_INDEX_URL, {
+      cache: 'no-cache',
+      credentials: 'omit',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(`GitHub widgets list failed: ${response.status}`);
+
+    const data = await response.json();
+    const files = Array.isArray(data?.files) ? data.files : [];
+    const names = new Set();
+
+    files.forEach((file) => {
+      const fileName = '/' + String(file?.name || '').replace(/^\/+/, '');
+      if (!fileName.startsWith('/widgets/')) return;
+
+      const rest = fileName.slice('/widgets/'.length);
+      const parts = rest.split('/').filter(Boolean);
+      if (parts.length !== 2 || parts[1] !== 'layers.json') return;
+      if (isValidGithubWidgetName(parts[0])) names.add(parts[0]);
+    });
+
+    return Array.from(names)
+      .map((name) => normalizeGithubWidgetEntry({ name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async function fetchGithubWidgetJsonDirect(widget, fileName) {
+    const entry = normalizeGithubWidgetEntry(widget);
+    if (entry.sourceId !== DEFAULT_GITHUB_WIDGET_SOURCE_ID) {
+      throw new Error('Direct fetch supports default widget source only');
+    }
+
+    const url = getGithubRawUrl(entry.name, fileName);
+    if (!url) throw new Error('Invalid GitHub widget name');
+
+    const response = await fetch(url, {
+      cache: 'no-cache',
+      credentials: 'omit',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(`GitHub widget file failed: ${response.status}`);
+    return response.json();
+  }
+
+  async function fetchGithubWidgetList() {
+    try {
+      const widgets = await requestGithubWidgetsBridge('list');
+      return Array.isArray(widgets) ? widgets.map(normalizeGithubWidgetEntry) : [];
+    } catch (bridgeError) {
+      try {
+        return await fetchGithubWidgetListDirect();
+      } catch (directError) {
+        console.error('Taptop Enhancer GitHub widgets list error:', bridgeError, directError);
+        throw directError;
+      }
+    }
+  }
+
+  async function fetchGithubWidgetJson(widget, fileName) {
+    const entry = normalizeGithubWidgetEntry(widget);
+
+    try {
+      return await requestGithubWidgetsBridge('file', {
+        sourceId: entry.sourceId,
+        widgetName: entry.name,
+        fileName
+      });
+    } catch (bridgeError) {
+      if (entry.sourceId !== DEFAULT_GITHUB_WIDGET_SOURCE_ID) {
+        console.error('Taptop Enhancer GitHub widget file error:', bridgeError);
+        throw bridgeError;
+      }
+
+      try {
+        return await fetchGithubWidgetJsonDirect(entry, fileName);
+      } catch (directError) {
+        console.error('Taptop Enhancer GitHub widget file error:', bridgeError, directError);
+        throw directError;
+      }
+    }
+  }
+
+  function isLayerClipboard(data) {
+    return !!(data && data.copiedLayout && data.action && data.tagID);
+  }
+
+  function getLayerNameFromImportedJson(json, fallbackName = 'layer') {
+    if (json?.type === LAYER_EXPORT_TYPE && json.layerName) return String(json.layerName);
+
+    const data = json?.type === LAYER_EXPORT_TYPE ? json.clipboardData : json;
+    const root = data?.copiedLayout?.tree?.root;
+    const tags = data?.copiedLayout?.tree?.tags || {};
+    const tag = tags[data?.tagID] || tags[root];
+
+    return String(tag?.name || tag?.alias || fallbackName || 'layer');
+  }
+
+  function normalizeImportedLayerJson(json, fallbackName = 'layer') {
+    const data = json?.type === LAYER_EXPORT_TYPE && isLayerClipboard(json.clipboardData)
+      ? json.clipboardData
+      : isLayerClipboard(json)
+        ? json
+        : null;
+
+    if (!data) return null;
+
+    const next = deepCloneJson(data);
+    const layerName = getLayerNameFromImportedJson(json, fallbackName);
+    const rootId = next?.copiedLayout?.tree?.root;
+    const rootTag = next?.copiedLayout?.tree?.tags?.[next.tagID] || next?.copiedLayout?.tree?.tags?.[rootId];
+
+    if (rootTag && layerName) rootTag.name = layerName;
+    return next;
+  }
+
+  function getClipboardRootId(data) {
+    return data?.tagID || data?.copiedLayout?.tree?.root || '';
+  }
+
+  function setClipboardData(api, data) {
+    try {
+      api?.clipboardStore?.setClipboard?.(data);
+      return;
+    } catch {}
+
+    try {
+      localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(data));
+      api?.clipboardStore?.updateState?.();
+    } catch {}
+  }
+
+  function warnIfImportedVersionDiffers(api, data) {
+    const currentVersion = api?.layout?.tree?.version;
+    const importedVersion = data?.copiedLayout?.tree?.version;
+    if (currentVersion && importedVersion && currentVersion !== importedVersion) {
+      showGithubWidgetToast('JSON от другой версии редактора, вставка может не сработать');
+    }
+  }
+
+  function emitLayoutChanged(api) {
+    try {
+      api?.layers?.setMap?.();
+      api?.events?.emit?.(api.events.ON_HTML_UPDATE);
+      api?.events?.emit?.(api.events.ON_CHANGE_TAG_DISPLAY);
+    } catch {}
+  }
+
+  function normalizeMarkerForClipboardPaste(api, marker) {
+    if (!marker) return null;
+
+    const next = Object.assign({}, marker);
+    next.id = getOriginalId(api, marker.id);
+
+    if (marker.afterChild || marker.deepAfterChild) {
+      next.afterChild = marker.deepAfterChild || getOriginalId(api, marker.afterChild);
+    }
+
+    if (marker.beforeChild || marker.deepBeforeChild) {
+      next.beforeChild = marker.deepBeforeChild || getOriginalId(api, marker.beforeChild);
+    }
+
+    return next;
+  }
+
+  async function pasteClipboardDataAtMarker(api, data, marker, options = {}) {
+    if (!api?.clipboard?.pasteFromClipboard || !data || !marker?.id) return null;
+
+    warnIfImportedVersionDiffers(api, data);
+    setClipboardData(api, data);
+    const pasteMarker = normalizeMarkerForClipboardPaste(api, marker);
+
+    let pasted = null;
+    try {
+      pasted = api.clipboard.pasteFromClipboard(pasteMarker, getClipboardRootId(data));
+    } catch (error) {
+      console.error('Taptop Enhancer GitHub widget paste error:', error);
+      return null;
+    }
+
+    if (!pasted) return null;
+
+    saveHistory(options.historyLabel || 'import github widget');
+    emitLayoutChanged(api);
+
+    if (options.select !== false) {
+      [0, 120, 300].forEach((delay) => {
+        setTimeout(() => selectCreatedEmbed(api, pasted), delay);
+      });
+    }
+
+    return pasted;
+  }
+
+  function isNamedLayer(tag, name) {
+    const expected = normalizeText(name).toLowerCase();
+    const candidates = [
+      readObjectValue(tag, 'bothName'),
+      readObjectValue(tag, 'name'),
+      readObjectValue(tag, 'alias'),
+      readObjectValue(tag, 'className')
+    ];
+    return candidates.some((value) => normalizeText(value).toLowerCase() === expected);
+  }
+
+  function normalizeLookupValue(value) {
+    return normalizeText(value).toLowerCase();
+  }
+
+  function normalizeDataValue(value) {
+    if (value == null) return '';
+    if (typeof value === 'object') {
+      if (Object.prototype.hasOwnProperty.call(value, 'value')) return normalizeDataValue(value.value);
+      if (Object.prototype.hasOwnProperty.call(value, 'text')) return normalizeDataValue(value.text);
+    }
+    return String(value);
+  }
+
+  function dataKeyCandidates(name) {
+    const clean = String(name || '').replace(/^custom-/, '').replace(/^data-/, '');
+    return Array.from(new Set([
+      `custom-data-${clean}`,
+      `data-${clean}`,
+      clean,
+      String(name || '')
+    ].filter(Boolean)));
+  }
+
+  function readDataEntry(tag, key) {
+    if (!tag) return null;
+    try {
+      const value = tag.getData?.(key);
+      if (value != null) return value;
+    } catch {}
+    try {
+      if (tag.data instanceof Map && tag.data.has(key)) return tag.data.get(key);
+    } catch {}
+    try {
+      if (tag.data && typeof tag.data === 'object' && Object.prototype.hasOwnProperty.call(tag.data, key)) {
+        return tag.data[key];
+      }
+    } catch {}
+    return null;
+  }
+
+  function readAttrEntry(tag, key) {
+    if (!tag) return null;
+    try {
+      const value = tag.getAttr?.(key);
+      if (value != null) return value;
+    } catch {}
+    try {
+      if (tag.attr instanceof Map && tag.attr.has(key)) return tag.attr.get(key);
+    } catch {}
+    try {
+      if (tag.attr && typeof tag.attr === 'object' && Object.prototype.hasOwnProperty.call(tag.attr, key)) {
+        return tag.attr[key];
+      }
+    } catch {}
+    return null;
+  }
+
+  function readElementAttr(tag, key) {
+    const element = tag?.dom || tag?.element || tag?.node;
+    if (!element || typeof element.getAttribute !== 'function') return null;
+    try {
+      return element.getAttribute(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function readCustomData(tag, name) {
+    for (const key of dataKeyCandidates(name)) {
+      const dataValue = readDataEntry(tag, key);
+      if (dataValue != null) return normalizeDataValue(dataValue);
+      const attrValue = readAttrEntry(tag, key);
+      if (attrValue != null) return normalizeDataValue(attrValue);
+      const elementValue = readElementAttr(tag, key);
+      if (elementValue != null) return normalizeDataValue(elementValue);
+    }
+    return '';
+  }
+
+  function getGithubWidgetScriptIdentity(scriptJson, widgetName) {
+    const fallbackLayerName = `${widgetName}-script`;
+    const layerName = getLayerNameFromImportedJson(scriptJson, fallbackLayerName);
+    const baseName = String(layerName || '').replace(/^widget[-_\s]+/i, '') || widgetName;
+    const dataNames = new Set([
+      widgetName,
+      baseName,
+      layerName,
+      fallbackLayerName
+    ].map(normalizeLookupValue).filter(Boolean));
+    const layerNames = new Set([
+      layerName,
+      fallbackLayerName,
+      `widget-${widgetName}`,
+      `widget-${baseName}`
+    ].map(normalizeLookupValue).filter(Boolean));
+
+    return { dataNames, layerNames };
+  }
+
+  function findExistingGithubWidgetScript(api, scriptJson, widgetName) {
+    const tree = api?.layout?.tree;
+    if (!tree) return null;
+
+    const { dataNames, layerNames } = getGithubWidgetScriptIdentity(scriptJson, widgetName);
+    let found = null;
+    [tree, tree.tags, tree.composed, tree.composed?.tags].forEach((collection) => {
+      if (found) return;
+      forEachTagInCollection(collection, (tag) => {
+        if (found || !isEmbedTag(tag)) return;
+
+        const scriptName = normalizeLookupValue(readCustomData(tag, GITHUB_WIDGET_SCRIPT_DATA_NAME));
+        if (scriptName && dataNames.has(scriptName)) {
+          found = tag;
+          return;
+        }
+
+        const tagNames = [
+          readObjectValue(tag, 'bothName'),
+          readObjectValue(tag, 'name'),
+          readObjectValue(tag, 'alias')
+        ].map(normalizeLookupValue);
+        if (tagNames.some((name) => layerNames.has(name))) found = tag;
+      });
+    });
+
+    return found ? getOriginalTag(api, found) : null;
+  }
+
+  function markGithubWidgetScriptData(data, widgetName) {
+    const rootId = getClipboardRootId(data);
+    const rootTag = data?.copiedLayout?.tree?.tags?.[data?.tagID] || data?.copiedLayout?.tree?.tags?.[rootId];
+    if (!rootTag) return;
+
+    if (!rootTag.data || typeof rootTag.data !== 'object') rootTag.data = {};
+    rootTag.data[`custom-data-${GITHUB_WIDGET_SCRIPT_DATA_NAME}`] = {
+      type: 'STRING',
+      value: String(widgetName || '')
+    };
+  }
+
+  function forEachTagInCollection(collection, callback) {
+    if (!collection) return;
+
+    if (collection instanceof Map) {
+      collection.forEach(callback);
+      return;
+    }
+
+    if (collection.tags instanceof Map) {
+      collection.tags.forEach(callback);
+      return;
+    }
+
+    if (collection.map instanceof Map) {
+      collection.map.forEach(callback);
+      return;
+    }
+
+    if (Array.isArray(collection.list)) {
+      collection.list.forEach(callback);
+      return;
+    }
+
+    if (collection.tags && typeof collection.tags === 'object') {
+      Object.values(collection.tags).forEach(callback);
+      return;
+    }
+
+    if (collection.map && typeof collection.map === 'object') {
+      Object.values(collection.map).forEach(callback);
+    }
+  }
+
+  function findScriptsLayer(api = getTaptopApi()) {
+    const tree = api?.layout?.tree;
+    if (!tree) return null;
+
+    try {
+      const found = tree.findFirstByID?.(tree.root, (tag) => isNamedLayer(tag, SCRIPTS_LAYER_NAME));
+      if (found) return getOriginalTag(api, found);
+    } catch {}
+
+    let found = null;
+    [tree, tree.tags, tree.composed, tree.composed?.tags].forEach((collection) => {
+      if (found) return;
+      forEachTagInCollection(collection, (tag) => {
+        if (!found && isNamedLayer(tag, SCRIPTS_LAYER_NAME)) found = tag;
+      });
+    });
+
+    return found ? getOriginalTag(api, found) : null;
+  }
+
+  function getWidgetLayout(api, widgetCode) {
+    try {
+      return api?.widgets?.get?.(widgetCode) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function moveRootChildToFront(api, tag) {
+    const root = getOriginalTag(api, getRootTag(api));
+    const target = getOriginalTag(api, tag);
+    if (!root?.id || !target?.id || !Array.isArray(root.children)) return false;
+    if (getOriginalId(api, getParentId(target)) !== root.id) return false;
+
+    const targetId = getOriginalId(api, target.id);
+    const index = root.children.findIndex((id) => getOriginalId(api, id) === targetId);
+    if (index <= 0) return false;
+
+    const children = root.children.slice();
+    const [childId] = children.splice(index, 1);
+    children.unshift(childId);
+
+    try {
+      if (typeof root.setChildren === 'function') root.setChildren(children);
+      else root.children = children;
+      emitLayoutChanged(api);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function ensureScriptsLayer(api = getTaptopApi()) {
+    let scriptsLayer = findScriptsLayer(api);
+    if (scriptsLayer && canInsertInto(getComposedTag(api, scriptsLayer) || scriptsLayer, api)) {
+      if (moveRootChildToFront(api, scriptsLayer)) saveHistory('move scripts layer');
+      return scriptsLayer;
+    }
+
+    const root = getOriginalTag(api, getRootTag(api));
+    const divCode = api?.constants?.gz?.DIV || 'div';
+    const divLayout = getWidgetLayout(api, divCode);
+
+    if (!root?.id || !divLayout || !api?.layout?.add) return null;
+
+    let created = null;
+    try {
+      const firstChildId = Array.isArray(root.children) ? root.children[0] || '' : '';
+      const addOptions = {
+        layout: divLayout,
+        parentId: root.id
+      };
+      if (firstChildId) addOptions.beforeChildId = firstChildId;
+
+      const result = api.layout.add(addOptions);
+      created = getTagById(api, result?.id) || api.layout.tree?.get?.(result?.id);
+    } catch (error) {
+      console.error('Taptop Enhancer create Scripts layer error:', error);
+    }
+
+    if (!created) return null;
+
+    applyLayerName(api, created, SCRIPTS_LAYER_NAME);
+    applyDisplayNoneClass(api, created);
+    saveHistory('create scripts layer');
+    emitLayoutChanged(api);
+
+    scriptsLayer = getOriginalTag(api, created);
+    try {
+      api?.layers?.open?.(scriptsLayer.id);
+      api?.ui?.setCurrentDesignLayerIds?.(Array.from(api?.layers?.expand || []));
+    } catch {}
+
+    return scriptsLayer;
+  }
+
+  function buildLayerDropMarker(api, dropState, clipboardData) {
+    if (!api || !dropState) return null;
+
+    const action = clipboardData?.action || api?.constants?.aI?.COPY_COMPONENT || 'copy';
+    const rootId = getClipboardRootId(clipboardData);
+    const marker = api?.dropPosition?.getDropPosition?.(action, dropState.dropId, rootId, dropState.overId);
+    if (marker) return marker;
+
+    const parentTag = getOriginalTag(api, getTagById(api, dropState.dropId));
+    if (!parentTag?.id) return null;
+
+    return {
+      id: parentTag.id,
+      afterChild: getOriginalId(api, dropState.afterId),
+      beforeChild: getOriginalId(api, dropState.beforeId)
+    };
+  }
+
+  function getFallbackInsertMarker(api) {
+    const target = getScriptWidgetTarget(api);
+    const originalTarget = getOriginalTag(api, target);
+    if (originalTarget) return buildAppendMarkerPosition(api, originalTarget);
+
+    const root = getOriginalTag(api, getRootTag(api));
+    return root ? buildAppendMarkerPosition(api, root) : null;
+  }
+
+  async function importGithubWidgetScript(api, scriptJson, widgetName) {
+    const existing = findExistingGithubWidgetScript(api, scriptJson, widgetName);
+    if (existing) return existing;
+
+    const scriptData = normalizeImportedLayerJson(scriptJson, `${widgetName}-script`);
+    if (!scriptData) return null;
+    markGithubWidgetScriptData(scriptData, widgetName);
+
+    const scriptsLayer = ensureScriptsLayer(api);
+    if (!scriptsLayer) {
+      showGithubWidgetToast('Не удалось создать слой Scripts');
+      return null;
+    }
+
+    const marker = buildAppendMarkerPosition(api, scriptsLayer);
+    const pasted = await pasteClipboardDataAtMarker(api, scriptData, marker, {
+      historyLabel: `import github widget script ${widgetName}`,
+      select: false
+    });
+
+    if (pasted) {
+      const original = getOriginalTag(api, pasted);
+      if (original) applyDisplayNoneClass(api, original);
+    }
+
+    return pasted;
+  }
+
+  async function importGithubWidget(widgetValue, options = {}) {
+    const widget = getGithubWidgetFromValue(widgetValue);
+    const widgetName = widget.name;
+
+    if (!isValidGithubWidgetName(widgetName)) {
+      showGithubWidgetToast('Некорректное имя виджета');
+      return null;
+    }
+
+    const api = getTaptopApi();
+    if (!api?.layout || !api?.clipboard) {
+      showGithubWidgetToast('Редактор еще загружается');
+      return null;
+    }
+
+    showGithubWidgetToast(`Загружаю ${widgetName}...`);
+
+    let layersJson = null;
+    let scriptJson = null;
+
+    try {
+      [layersJson, scriptJson] = await Promise.all([
+        fetchGithubWidgetJson(widget, 'layers.json'),
+        fetchGithubWidgetJson(widget, 'script.json').catch(() => null)
+      ]);
+    } catch (error) {
+      console.error('Taptop Enhancer GitHub widget load error:', error);
+      showGithubWidgetToast(`Не удалось загрузить ${widgetName}`);
+      return null;
+    }
+
+    const layersData = normalizeImportedLayerJson(layersJson, widgetName);
+    if (!layersData) {
+      showGithubWidgetToast('layers.json не похож на слой Taptop');
+      return null;
+    }
+
+    const marker = options.dropState
+      ? buildLayerDropMarker(api, options.dropState, layersData)
+      : options.marker || api?.runtime?.markerLastPosition || getFallbackInsertMarker(api);
+
+    if (!marker?.id) {
+      showGithubWidgetToast('Не найдено место для вставки');
+      return null;
+    }
+
+    const pastedWidget = await pasteClipboardDataAtMarker(api, layersData, marker, {
+      historyLabel: `import github widget ${widgetName}`
+    });
+
+    if (!pastedWidget) {
+      showGithubWidgetToast(`Не удалось добавить ${widgetName}`);
+      return null;
+    }
+
+    if (scriptJson) {
+      await importGithubWidgetScript(api, scriptJson, widgetName);
+      [120, 360].forEach((delay) => {
+        setTimeout(() => selectCreatedEmbed(api, pastedWidget), delay);
+      });
+    }
+
+    showGithubWidgetToast(`${widgetName} добавлен`);
+    return pastedWidget;
+  }
+
+  function isGithubWidgetDragEvent(event) {
+    if (githubWidgetDragState) return true;
+    const types = Array.from(event.dataTransfer?.types || []);
+    return types.includes(GITHUB_WIDGET_DRAG_TYPE);
+  }
+
+  function getGithubWidgetNameFromEvent(event) {
+    if (githubWidgetDragState?.widgetName) return githubWidgetDragState.widgetName;
+    try {
+      return event.dataTransfer?.getData?.(GITHUB_WIDGET_DRAG_TYPE) || event.dataTransfer?.getData?.('text/plain') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function startGithubWidgetDrag(event, widgetName) {
+    const widget = getGithubWidgetFromValue(widgetName);
+    const widgetKey = getGithubWidgetKey(widget);
+    const api = getTaptopApi();
+    githubWidgetDragState = {
+      widgetName: widgetKey,
+      startedAt: Date.now()
+    };
+    githubWidgetSuppressClickUntil = Date.now() + 600;
+    try { api?.runtime?.setMarkerPosition?.(api.layout, null); } catch {}
+    setNativeWidgetDragState(api, getGithubWidgetDragCode(api));
+
+    try {
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData(GITHUB_WIDGET_DRAG_TYPE, widgetKey);
+      event.dataTransfer.setData('text/plain', widget.name);
+    } catch {}
+  }
+
+  function finishGithubWidgetDrag() {
+    if (githubWidgetDragState) githubWidgetSuppressClickUntil = Date.now() + 600;
+    clearScriptWidgetExpandTimer();
+    clearScriptDropTarget();
+    scheduleNativeLayerDragStateClear();
+    setTimeout(() => {
+      githubWidgetDragState = null;
+      githubWidgetLastDropState = null;
+    }, 0);
+  }
+
+  async function createGithubWidgetFromPanel(widgetName) {
+    const api = getTaptopApi();
+    const marker = getFallbackInsertMarker(api);
+    await importGithubWidget(widgetName, { marker });
+  }
+
   function buildScriptWidgetCard(referenceCard) {
     const card = referenceCard instanceof HTMLElement
       ? referenceCard.cloneNode(true)
@@ -1082,6 +1898,74 @@
     return card;
   }
 
+  function buildGithubWidgetCard(referenceCard, widget) {
+    const card = referenceCard instanceof HTMLElement
+      ? referenceCard.cloneNode(true)
+      : document.createElement('div');
+    const entry = normalizeGithubWidgetEntry(widget);
+    const widgetName = entry.name || '';
+    const widgetKey = getGithubWidgetKey(entry);
+
+    [card, ...Array.from(card.querySelectorAll('*'))].forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      el.removeAttribute('id');
+      el.removeAttribute('draggable');
+      el.removeAttribute(SCRIPT_WIDGET_ATTR);
+      el.removeAttribute(GITHUB_WIDGET_ATTR);
+      el.removeAttribute(SCRIPT_WIDGET_HOVER_OUTLINE_ATTR);
+      el.draggable = false;
+    });
+
+    card.draggable = true;
+    card.setAttribute('draggable', 'true');
+    card.setAttribute(GITHUB_WIDGET_ATTR, '1');
+    card.dataset.ttEnhancerGithubWidgetName = widgetName;
+    card.dataset.ttEnhancerGithubWidgetKey = widgetKey;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', widgetName);
+    card.setAttribute('title', entry.sourceTitle ? `${widgetName} · ${entry.sourceTitle}` : widgetName);
+    card.style.cursor = 'pointer';
+    removeDisabledClasses(card);
+    replaceWidgetCardText(card, widgetName);
+
+    if (!(referenceCard instanceof HTMLElement)) {
+      card.textContent = widgetName;
+      card.style.cssText = [
+        'display: flex',
+        'align-items: center',
+        'min-height: 48px',
+        'padding: 0 16px',
+        'border: 1px solid #e8e8e8',
+        'border-radius: 6px',
+        'background: #fff',
+        'font: inherit',
+        'cursor: pointer'
+      ].join(';');
+    }
+
+    card.addEventListener('dragstart', (event) => startGithubWidgetDrag(event, widgetKey), true);
+    card.addEventListener('dragend', finishGithubWidgetDrag, true);
+    card.addEventListener('mouseenter', () => setScriptWidgetHover(card, true));
+    card.addEventListener('mouseleave', () => setScriptWidgetHover(card, false));
+    card.addEventListener('focus', () => setScriptWidgetHover(card, true), true);
+    card.addEventListener('blur', () => setScriptWidgetHover(card, false), true);
+
+    card.addEventListener('click', (event) => {
+      stopScriptWidgetEvent(event);
+      if (githubWidgetSuppressClickUntil > Date.now()) return;
+      createGithubWidgetFromPanel(widgetKey);
+    }, true);
+
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      stopScriptWidgetEvent(event);
+      createGithubWidgetFromPanel(widgetKey);
+    }, true);
+
+    return card;
+  }
+
   function ensureScriptWidgetCard() {
     const svgIconCard = findWidgetCardByText(SVG_ICON_WIDGET_TEXT);
     if (!svgIconCard?.parentElement) return;
@@ -1104,9 +1988,93 @@
     svgIconCard.insertAdjacentElement('afterend', scriptCard);
   }
 
+  async function loadGithubWidgets() {
+    if (githubWidgetsLoaded || githubWidgetsLoading || githubWidgetsLoadFailed || githubWidgetsRetryTimer) return;
+
+    githubWidgetsLoading = true;
+    try {
+      const widgets = await fetchGithubWidgetList();
+      githubWidgets = Array.isArray(widgets)
+        ? widgets.map(normalizeGithubWidgetEntry).filter((widget) => isValidGithubWidgetName(widget?.name))
+        : [];
+      githubWidgetsLoaded = true;
+      githubWidgetsLoadFailed = false;
+      githubWidgetsLoadRetries = 0;
+      clearTimeout(githubWidgetsRetryTimer);
+      githubWidgetsRetryTimer = 0;
+      ensureGithubWidgetCards();
+    } catch (error) {
+      console.error('Taptop Enhancer GitHub widgets load error:', error);
+      if (githubWidgetsLoadRetries < 3) {
+        githubWidgetsLoadRetries += 1;
+        clearTimeout(githubWidgetsRetryTimer);
+        githubWidgetsRetryTimer = setTimeout(() => {
+          githubWidgetsRetryTimer = 0;
+          loadGithubWidgets();
+        }, 1000 * githubWidgetsLoadRetries);
+      } else {
+        githubWidgets = [];
+        githubWidgetsLoaded = true;
+        githubWidgetsLoadFailed = true;
+        githubWidgetsLoadRetries = 0;
+        showGithubWidgetToast('Не удалось загрузить дополнительные виджеты');
+        ensureGithubWidgetCards();
+      }
+    } finally {
+      githubWidgetsLoading = false;
+    }
+  }
+
+  function ensureGithubWidgetCards() {
+    const svgIconCard = findWidgetCardByText(SVG_ICON_WIDGET_TEXT);
+    const scriptCard = document.querySelector(`[${SCRIPT_WIDGET_ATTR}]`);
+    const anchor = scriptCard || svgIconCard;
+
+    if (!anchor?.parentElement) return;
+
+    if (!githubWidgetsLoaded) {
+      loadGithubWidgets();
+      return;
+    }
+
+    const list = anchor.parentElement;
+    const desiredKeys = new Set(githubWidgets.map(getGithubWidgetKey));
+    const existingCards = new Map();
+
+    document.querySelectorAll(`[${GITHUB_WIDGET_ATTR}]`).forEach((card) => {
+      const key = card.dataset.ttEnhancerGithubWidgetKey || card.dataset.ttEnhancerGithubWidgetName || '';
+      if (card.parentElement !== list || !desiredKeys.has(key) || existingCards.has(key)) {
+        card.remove();
+        return;
+      }
+      existingCards.set(key, card);
+    });
+
+    const referenceCard = findWidgetCardByText(EMBED_WIDGET_TEXT) || svgIconCard || scriptCard;
+    let cursor = anchor;
+
+    githubWidgets.forEach((widget) => {
+      const widgetKey = getGithubWidgetKey(widget);
+      let card = existingCards.get(widgetKey);
+      if (!card) card = buildGithubWidgetCard(referenceCard, widget);
+
+      if (card.previousElementSibling !== cursor) {
+        cursor.insertAdjacentElement('afterend', card);
+      }
+
+      cursor = card;
+    });
+  }
+
   function scheduleScriptWidgetCard() {
     [0, 80, 180, 360, 700, 1200, 1800].forEach((delay) => {
       setTimeout(ensureScriptWidgetCard, delay);
+    });
+  }
+
+  function scheduleGithubWidgetCards() {
+    [0, 120, 300, 700, 1200, 2000, 3200].forEach((delay) => {
+      setTimeout(ensureGithubWidgetCards, delay);
     });
   }
 
@@ -1300,6 +2268,7 @@
     if (window.__ttEnhancerLayerVisibilityTogglesInteracting) return;
     if (event.target?.closest?.(`[${INLINE_BUTTON_ATTR}]`)) return;
     if (event.target?.closest?.(`[${SCRIPT_WIDGET_ATTR}]`)) return;
+    if (event.target?.closest?.(`[${GITHUB_WIDGET_ATTR}]`)) return;
     if (event.target?.closest?.(`[${VISIBILITY_TOGGLES_ATTR}]`)) return;
     if (event.target?.closest?.(LAYERS_LIST_SELECTOR)) return;
 
@@ -1315,6 +2284,28 @@
   }
 
   function onDocumentDragOver(event) {
+    if (isGithubWidgetDragEvent(event)) {
+      const api = getTaptopApi();
+      const dropState = getLayerDropStateFromEvent(event, api);
+
+      setNativeWidgetDragState(api, getGithubWidgetDragCode(api));
+
+      if (!dropState) {
+        githubWidgetLastDropState = null;
+        clearScriptWidgetExpandTimer();
+        clearScriptDropTarget();
+        return;
+      }
+
+      event.preventDefault();
+      try { event.dataTransfer.dropEffect = 'copy'; } catch {}
+      githubWidgetLastDropState = dropState;
+      setNativeLayerDropState(api, dropState);
+      scheduleScriptWidgetLayerExpand(api, dropState);
+      markScriptDropTarget(dropState.item);
+      return;
+    }
+
     if (!isScriptWidgetDragEvent(event)) return;
 
     const api = getTaptopApi();
@@ -1336,6 +2327,34 @@
   }
 
   async function onDocumentDrop(event) {
+    if (isGithubWidgetDragEvent(event)) {
+      if (githubWidgetDropInProgress) return;
+
+      const widgetName = getGithubWidgetNameFromEvent(event);
+      const api = getTaptopApi();
+      const dropState = getLayerDropStateFromEvent(event, api);
+      const marker = dropState ? null : api?.runtime?.markerLastPosition;
+
+      event.preventDefault();
+
+      githubWidgetDropInProgress = true;
+      githubWidgetLastDropState = null;
+      clearNativeLayerDragState(api);
+      finishGithubWidgetDrag();
+
+      try {
+        await importGithubWidget(widgetName, {
+          dropState,
+          marker
+        });
+      } finally {
+        setTimeout(() => {
+          githubWidgetDropInProgress = false;
+        }, 300);
+      }
+      return;
+    }
+
     if (!isScriptWidgetDragEvent(event)) return;
     if (scriptWidgetDropInProgress) return;
 
@@ -1362,6 +2381,32 @@
   }
 
   async function onDocumentDragEnd(event) {
+    if (isGithubWidgetDragEvent(event)) {
+      if (githubWidgetDropInProgress) return;
+
+      const widgetName = githubWidgetDragState?.widgetName || getGithubWidgetNameFromEvent(event);
+      const api = getTaptopApi();
+      const dropState = githubWidgetLastDropState;
+
+      if (!dropState) {
+        finishGithubWidgetDrag();
+        return;
+      }
+
+      githubWidgetDropInProgress = true;
+      githubWidgetLastDropState = null;
+      clearNativeLayerDragState(api);
+      finishGithubWidgetDrag();
+      try {
+        await importGithubWidget(widgetName, { dropState });
+      } finally {
+        setTimeout(() => {
+          githubWidgetDropInProgress = false;
+        }, 300);
+      }
+      return;
+    }
+
     if (!isScriptWidgetDragEvent(event)) return;
     if (scriptWidgetDropInProgress) return;
 
@@ -1390,6 +2435,7 @@
       raf = 0;
       if (isInlineEditEnabled) ensureInlineEditButton();
       if (isScriptWidgetEnabled) ensureScriptWidgetCard();
+      if (isGithubWidgetsEnabled) ensureGithubWidgetCards();
     });
   }
 
@@ -1406,6 +2452,7 @@
         (
           node.hasAttribute(INLINE_BUTTON_ATTR) ||
           node.hasAttribute(SCRIPT_WIDGET_ATTR) ||
+          node.hasAttribute(GITHUB_WIDGET_ATTR) ||
           node.hasAttribute(SCRIPT_WIDGET_HOVER_OUTLINE_ATTR)
         )
       ));
@@ -1420,22 +2467,30 @@
     window.addEventListener('resize', onViewportChange, true);
   }
 
-  if (isInlineEditEnabled || isScriptWidgetEnabled) {
+  if (isInlineEditEnabled || isScriptWidgetEnabled || isGithubWidgetsEnabled) {
     document.addEventListener('mousedown', onDocumentMouseDown, true);
     observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
   }
 
-  if (isScriptWidgetEnabled) {
+  if (isScriptWidgetEnabled || isGithubWidgetsEnabled) {
     document.addEventListener('dragover', onDocumentDragOver, true);
     document.addEventListener('drop', onDocumentDrop, true);
     document.addEventListener('dragend', onDocumentDragEnd, true);
+  }
+
+  if (isScriptWidgetEnabled) {
     scheduleScriptWidgetCard();
+  }
+
+  if (isGithubWidgetsEnabled) {
+    scheduleGithubWidgetCards();
   }
 
   window.__ttEnhancerEmbedContextMenu = {
     features: {
       inlineEdit: isInlineEditEnabled,
-      scriptWidget: isScriptWidgetEnabled
+      scriptWidget: isScriptWidgetEnabled,
+      githubWidgets: isGithubWidgetsEnabled
     },
     observer,
     onLayerClick,
@@ -1444,6 +2499,7 @@
     onDocumentDrop,
     onDocumentDragEnd,
     onViewportChange,
-    clearScriptWidgetExpandTimer
+    clearScriptWidgetExpandTimer,
+    clearGithubWidgetTimers
   };
 })();
