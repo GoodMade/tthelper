@@ -222,11 +222,29 @@
     return String(value || '').split(/[_:-]+/).some((part) => /^embed$/i.test(part));
   }
 
+  function hasObjectFlag(item, key) {
+    if (!item) return false;
+    try {
+      if (item[key] === true) return true;
+    } catch {}
+    try {
+      if (typeof item.get === 'function' && item.get(key) === true) return true;
+    } catch {}
+    return false;
+  }
+
   function isEmbedTag(tag) {
+    if (!tag) return false;
+    if (hasObjectFlag(tag, 'isEmbedWidget') || hasObjectFlag(tag, 'isCanSetEmbedCode')) return true;
+    if (hasCan(tag, 'SET_EMBED_CODE')) return true;
+
     return [
       readObjectValue(tag, 'type'),
       readObjectValue(tag, 'widgetName'),
-      readObjectValue(tag, 'widgetType')
+      readObjectValue(tag, 'widgetType'),
+      readObjectValue(tag, 'widgetCode'),
+      readObjectValue(tag, 'widget'),
+      readObjectValue(tag, 'code')
     ].some(isEmbedValue);
   }
 
@@ -703,13 +721,28 @@
     });
   }
 
+  function isSelectedLayerItem(item) {
+    return item.matches([
+      '.is-active',
+      '.active',
+      '.tt-layers__item_selected',
+      '.tt-layers__item--selected',
+      '[aria-selected="true"]',
+      '[data-selected="true"]',
+      '[data-active="true"]'
+    ].join(','));
+  }
+
   function isEmbedLayerItem(item) {
-    if (!item) return false;
+    if (!(item instanceof HTMLElement)) return false;
 
-    const selectedTag = getSelectedTag();
-    if (selectedTag) return isEmbedTag(selectedTag);
+    const api = getTaptopApi();
+    const itemTag = getLayerTagFromItem(item, api, false);
+    if (isEmbedTag(itemTag)) return true;
+    if (hasCodeIcon(item)) return true;
 
-    return hasCodeIcon(item);
+    const selectedTag = getSelectedTag(api);
+    return isSelectedLayerItem(item) && isEmbedTag(selectedTag);
   }
 
   function findTextButton(text) {

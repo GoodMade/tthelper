@@ -7,7 +7,8 @@
   const CODE_EDITOR_STACK_ACTIVE_CLASS = 'tt-enhancer--stack-active';
   const CODE_EDITOR_STACK_BACKGROUND_CLASS = 'tt-enhancer--stack-background';
   const STACK_ACTIVE_CLASS = 'is-stack-active';
-  const STORAGE_KEY = 'miniBrowser_pinnedTabs';
+  const PINNED_LINKS_KEY = 'miniBrowser_pinnedTabs';
+  const TABS_KEY = 'miniBrowser_tabs';
   const OPEN_SITE_BUTTON_KEY = 'miniBrowser_openCurrentSiteTabButton';
   const BOOKMARKS_KEY = 'miniBrowser_bookmarks';
   const OPEN_KEY = 'tt_enhancer_mini_browser_open';
@@ -48,6 +49,10 @@
     { id: 'glm', title: 'GLM', url: 'https://chat.z.ai', active: false },
     { id: 'gigachat', title: 'GigaChat', url: 'https://giga.chat', active: false }
   ];
+  const DEFAULT_PINNED_LINKS = [
+    { id: 'project-site', title: 'Сайт проекта', url: '', active: true, dynamicUrl: 'currentSite' },
+    ...DEFAULT_TABS
+  ];
 
   const existing = window.__ttEnhancerMiniBrowser;
   if (existing?.destroy) {
@@ -62,6 +67,7 @@
     sideButton: null,
     panel: null,
     tabs: [],
+    pinnedLinks: [],
     showOpenSiteButton: false,
     bookmarks: { version: 1, folders: [] },
     history: [],
@@ -109,16 +115,21 @@
     return safeChromeCall(() => chrome.runtime.sendMessage(message, callback));
   }
 
+  function createBlankTab() {
+    return {
+      id: uid('tab'),
+      title: 'Новая вкладка',
+      url: '',
+      active: true,
+      custom: true,
+      deviceId: 'default',
+      fitDevice: false
+    };
+  }
+
   function cloneTabs(tabs) {
-    const source = Array.isArray(tabs) && tabs.length ? tabs : DEFAULT_TABS;
-    const merged = source.map((tab) => ({ ...tab }));
-
-    DEFAULT_TABS.forEach((defaultTab) => {
-      const exists = merged.some((tab) => tab.id === defaultTab.id || normalizeUrl(tab.url) === defaultTab.url);
-      if (!exists) merged.push({ ...defaultTab });
-    });
-
-    return merged.map((tab, index) => ({
+    const source = Array.isArray(tabs) ? tabs : DEFAULT_TABS;
+    const normalized = source.map((tab, index) => ({
       id: String(tab.id || 'tab-' + Date.now() + '-' + index),
       title: String(tab.title || tab.url || 'Новая вкладка'),
       url: normalizeUrl(tab.url || ''),
@@ -126,7 +137,45 @@
       deleted: !!tab.deleted,
       deviceId: normalizeDeviceId(tab.deviceId || 'default'),
       fitDevice: !!tab.fitDevice
-    })).filter((tab) => tab.deleted || tab.url || !tab.id.startsWith('custom-'));
+    })).filter((tab) => !tab.deleted && tab.active && (tab.url || !tab.id.startsWith('custom-')));
+
+    return normalized.length ? normalized : [createBlankTab()];
+  }
+
+  function clonePinnedLinks(rawTabs) {
+    let source = Array.isArray(rawTabs) && rawTabs.length
+      ? rawTabs.map((tab) => ({ ...tab }))
+      : DEFAULT_PINNED_LINKS.map((tab) => ({ ...tab }));
+    source = source.filter((tab) => {
+      return !tab?.deleted || !DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
+    });
+
+    DEFAULT_PINNED_LINKS.forEach((defaultTab) => {
+      const exists = source.some((tab) => isSamePinnedDefault(tab, defaultTab));
+      if (!exists) source.push({ ...defaultTab });
+    });
+
+    return source.map((tab, index) => {
+      const url = resolvePinnedLinkUrl(tab);
+      if (!url || tab?.active === false || tab?.deleted) return null;
+      return {
+        id: String(tab?.id || 'pinned-' + index),
+        title: String(tab?.title || titleFromUrl(url)),
+        url
+      };
+    }).filter(Boolean);
+  }
+
+  function isSamePinnedDefault(tab, defaultTab) {
+    if (!tab || !defaultTab) return false;
+    if (tab.id === defaultTab.id) return true;
+    if (defaultTab.dynamicUrl) return tab.dynamicUrl === defaultTab.dynamicUrl;
+    return normalizeUrl(tab.url || '') === normalizeUrl(defaultTab.url || '');
+  }
+
+  function resolvePinnedLinkUrl(tab) {
+    if (tab?.dynamicUrl === 'currentSite') return currentSiteUrl();
+    return normalizeUrl(tab?.url || '');
   }
 
   function uid(prefix) {
@@ -306,14 +355,21 @@
   }
 
   function readTabs(callback) {
-    safeChromeCall(() => chrome.storage.sync.get({ [STORAGE_KEY]: DEFAULT_TABS }, (settings) => {
-      const rawTabs = Array.isArray(settings[STORAGE_KEY]) ? settings[STORAGE_KEY] : DEFAULT_TABS;
+    safeChromeCall(() => chrome.storage.sync.get({ [TABS_KEY]: null }, (settings) => {
+      const storedTabs = Array.isArray(settings[TABS_KEY]) ? settings[TABS_KEY] : null;
+      const rawTabs = storedTabs || DEFAULT_TABS;
       const tabs = cloneTabs(rawTabs);
-      if (tabs.length !== rawTabs.length) {
-        chrome.storage.sync.set({ [STORAGE_KEY]: tabs });
+      if (!storedTabs || tabs.length !== rawTabs.length) {
+        chrome.storage.sync.set({ [TABS_KEY]: tabs });
       }
       callback(tabs);
     }), () => callback(cloneTabs(DEFAULT_TABS)));
+  }
+
+  function readPinnedLinks(callback) {
+    safeChromeCall(() => chrome.storage.sync.get({ [PINNED_LINKS_KEY]: DEFAULT_PINNED_LINKS }, (settings) => {
+      callback(clonePinnedLinks(settings[PINNED_LINKS_KEY]));
+    }), () => callback(clonePinnedLinks(DEFAULT_PINNED_LINKS)));
   }
 
   function readBookmarks(callback) {
@@ -328,7 +384,7 @@
 
   function saveTabs() {
     safeChromeCall(() => chrome.storage.sync.set({
-      [STORAGE_KEY]: state.tabs.filter((tab) => tab.url || !tab.transient)
+      [TABS_KEY]: state.tabs.filter((tab) => tab.url || !tab.transient)
     }));
   }
 
@@ -396,7 +452,7 @@
     stopTaptopModalEvents(button);
     button.addEventListener('click', (event) => {
       event.stopPropagation();
-      safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast' }, (response) => {
+      safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast', projectSiteUrl: currentSiteUrl() }, (response) => {
         const error = chrome.runtime.lastError?.message || response?.error;
         if (!error && response?.ok) return;
         console.warn('Taptop Enhancer side panel error:', error || 'unknown error');
@@ -621,7 +677,7 @@
     });
     panel.querySelector('[data-action="sidepanel"]').addEventListener('click', (event) => {
       event.stopPropagation();
-      safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast' }, (response) => {
+      safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast', projectSiteUrl: currentSiteUrl() }, (response) => {
         const error = chrome.runtime.lastError?.message || response?.error;
         if (error || !response?.ok) {
           console.warn('Taptop Enhancer side panel error:', error || 'unknown error');
@@ -636,7 +692,8 @@
         safeRuntimeSendMessage({
           action: 'openMiniBrowserSidePanel',
           url: tab.url,
-          title: tab.title || titleFromUrl(tab.url)
+          title: tab.title || titleFromUrl(tab.url),
+          projectSiteUrl: currentSiteUrl()
         }, (response) => {
           const error = chrome.runtime.lastError?.message || response?.error;
           if (error || !response?.ok) {
@@ -659,6 +716,7 @@
       event.preventDefault();
       submitAddressValue();
     });
+    panel.querySelector('.tt-enhancer-mini-browser-panel__address-input').addEventListener('input', showSuggestions);
     panel.querySelector('.tt-enhancer-mini-browser-panel__address-input').addEventListener('focus', showSuggestions);
     panel.querySelector('.tt-enhancer-mini-browser-panel__address-input').addEventListener('click', showSuggestions);
     panel.querySelector('.tt-enhancer-mini-browser-panel__address-field').addEventListener('focusout', (event) => {
@@ -1055,7 +1113,14 @@
 
   function ensureActiveTab() {
     const tabs = activeTabs();
-    if (!tabs.length) return;
+    if (!tabs.length) {
+      const tab = createBlankTab();
+      state.tabs.push(tab);
+      state.activeId = tab.id;
+      localSet(ACTIVE_KEY, state.activeId);
+      saveTabs();
+      return;
+    }
     if (!tabs.some((tab) => tab.id === state.activeId)) {
       state.activeId = localGet(ACTIVE_KEY, tabs[0].id);
       if (!tabs.some((tab) => tab.id === state.activeId)) state.activeId = tabs[0].id;
@@ -1209,7 +1274,31 @@
     });
   }
 
-  function suggestionItem(item) {
+  function removeHistoryItem(url) {
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    state.history = state.history.filter((item) => normalizeUrl(item.url) !== normalized);
+    safeChromeCall(() => chrome.storage.local.set({ [HISTORY_KEY]: state.history }), () => {
+      localSet(LEGACY_HISTORY_KEY, JSON.stringify(state.history));
+    });
+    showSuggestions();
+  }
+
+  function addressFilterQuery() {
+    const input = state.panel?.querySelector('.tt-enhancer-mini-browser-panel__address-input');
+    if (!input) return '';
+    if (document.activeElement === input && input.selectionStart === 0 && input.selectionEnd === input.value.length) return '';
+    return String(input.value || '').trim().toLowerCase();
+  }
+
+  function suggestionMatchesQuery(item, query) {
+    if (!query) return true;
+    const title = String(item?.title || '').toLowerCase();
+    const url = String(item?.url || '').toLowerCase();
+    return title.includes(query) || url.includes(query);
+  }
+
+  function suggestionItem(item, kind) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'tt-enhancer-mini-browser-panel__suggestion';
@@ -1231,10 +1320,43 @@
       navigateActive(item.url, item.title);
       hideSuggestions();
     });
-    return button;
+
+    if (kind !== 'history') return button;
+
+    const row = document.createElement('div');
+    row.className = 'tt-enhancer-mini-browser-panel__suggestion-row';
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'tt-enhancer-mini-browser-panel__suggestion-remove';
+    remove.setAttribute('aria-label', 'Удалить из истории');
+    remove.title = 'Удалить из истории';
+    remove.innerHTML = iconSvg('close');
+    remove.addEventListener('mousedown', (event) => event.preventDefault());
+    remove.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeHistoryItem(item.url);
+    });
+
+    row.appendChild(button);
+    row.appendChild(remove);
+    return row;
   }
 
-  function renderSuggestionList(kind, items) {
+  function historyEmptyText(query) {
+    return query ? 'Ничего не найдено' : 'Пока пусто';
+  }
+
+  function filteredHistory() {
+    const query = addressFilterQuery();
+    return {
+      query,
+      items: readHistory().filter((item) => suggestionMatchesQuery(item, query))
+    };
+  }
+
+  function renderSuggestionList(kind, items, emptyText) {
     const col = state.panel?.querySelector('[data-list="' + kind + '"]');
     const list = col?.querySelector('.tt-enhancer-mini-browser-panel__suggestions-list');
     if (!col || !list) return;
@@ -1243,12 +1365,12 @@
     if (!items.length) {
       const empty = document.createElement('div');
       empty.className = 'tt-enhancer-mini-browser-panel__suggestions-empty';
-      empty.textContent = kind === 'history' ? 'Пока пусто' : 'Нет ссылок';
+      empty.textContent = emptyText || (kind === 'history' ? 'Пока пусто' : 'Нет ссылок');
       list.appendChild(empty);
       return;
     }
 
-    items.forEach((item) => list.appendChild(suggestionItem(item)));
+    items.forEach((item) => list.appendChild(suggestionItem(item, kind)));
   }
 
   function showSuggestions() {
@@ -1256,12 +1378,9 @@
     const suggestions = state.panel.querySelector('.tt-enhancer-mini-browser-panel__suggestions');
     if (!suggestions) return;
 
-    const pinned = activeTabs()
-      .filter((tab) => tab.url)
-      .map((tab) => ({ title: tab.title || tab.url, url: tab.url }));
-
-    renderSuggestionList('history', readHistory());
-    renderSuggestionList('pinned', pinned);
+    const history = filteredHistory();
+    renderSuggestionList('history', history.items, historyEmptyText(history.query));
+    renderSuggestionList('pinned', state.pinnedLinks);
     suggestions.classList.remove('is-hidden');
   }
 
@@ -1921,8 +2040,12 @@
 
     if (state.activeId === id) {
       const nextTabs = activeTabs();
-      const next = nextTabs[Math.min(activeIndex, nextTabs.length - 1)] || nextTabs[nextTabs.length - 1] || null;
-      state.activeId = next?.id || '';
+      let next = nextTabs[Math.min(activeIndex, nextTabs.length - 1)] || nextTabs[nextTabs.length - 1] || null;
+      if (!next) {
+        next = createBlankTab();
+        state.tabs.push(next);
+      }
+      state.activeId = next.id;
       localSet(ACTIVE_KEY, state.activeId);
     }
 
@@ -2026,19 +2149,18 @@
 
   function refreshFromStorage() {
     readTabs((tabs) => {
-      readBookmarks((bookmarks) => {
-        readSharedHistory(() => {
-          state.tabs = tabs;
-          state.bookmarks = bookmarks;
-          ensureActiveTab();
-          migrateLegacyDeviceStateToActiveTab();
-          if (!activeTabs().length) {
-            destroy();
-            return;
-          }
-          ensurePanel();
-          renderPanel();
-          ensureButton();
+      readPinnedLinks((pinnedLinks) => {
+        readBookmarks((bookmarks) => {
+          readSharedHistory(() => {
+            state.tabs = tabs;
+            state.pinnedLinks = pinnedLinks;
+            state.bookmarks = bookmarks;
+            ensureActiveTab();
+            migrateLegacyDeviceStateToActiveTab();
+            ensurePanel();
+            renderPanel();
+            ensureButton();
+          });
         });
       });
     });
@@ -2082,7 +2204,13 @@
       safeChromeCall(() => chrome.storage.onChanged.removeListener(state.storageListener));
     }
     state.storageListener = (changes, areaName) => {
-      if (areaName === 'sync' && changes[STORAGE_KEY]) refreshFromStorage();
+      if (areaName === 'sync' && changes[TABS_KEY]) refreshFromStorage();
+      if (areaName === 'sync' && changes[PINNED_LINKS_KEY]) {
+        state.pinnedLinks = clonePinnedLinks(changes[PINNED_LINKS_KEY].newValue);
+        if (!state.panel?.querySelector('.tt-enhancer-mini-browser-panel__suggestions')?.classList.contains('is-hidden')) {
+          showSuggestions();
+        }
+      }
       if (areaName === 'sync' && changes[OPEN_SITE_BUTTON_KEY]) {
         state.showOpenSiteButton = !!changes[OPEN_SITE_BUTTON_KEY].newValue;
         ensureButton();

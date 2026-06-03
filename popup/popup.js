@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const WIDGET_CACHE_KEY = 'widgets_additionalWidgetCache';
   const WIDGET_DISABLED_KEY = 'widgets_additionalWidgetDisabled';
   const LEGACY_WIDGET_GITHUB_TOKEN_KEY = 'widgets_githubToken';
-  const FREE_PLAN_PAID_RESTORE_DONE_KEY = 'ttFreePlanPaidRestoreDoneV2';
+  const FREE_PLAN_PAID_RESTORE_DONE_KEY = 'ttFreePlanPaidRestoreDoneV3';
   const SENSITIVE_STORAGE_KEYS = new Set([LEGACY_WIDGET_GITHUB_TOKEN_KEY]);
   const LOCAL_WIDGET_SOURCE = {
     id: 'local_uploaded_widgets',
@@ -183,6 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function detectTaptopFreePlanInPage() {
+    const PENDING_TIMEOUT = 2500;
+    const RETRY_DELAY = 150;
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     function detectFromRuntime() {
       try {
         const chunk = window.rspackChunktaptop_design_editor;
@@ -196,14 +203,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const runtime = runtimeRequire?.(87621)?.A;
         const hasSiteFlag = typeof runtime?.isSitePaid === 'boolean';
-        const hasTeamFlag = typeof runtime?.isTeamPaid === 'boolean';
-        if (!hasSiteFlag || !hasTeamFlag) return null;
+        if (!hasSiteFlag) return null;
+
+        const teamInfo = runtime?.teamInfo || null;
+        const hasTeamInfoFlag = typeof teamInfo?.isTeamPaid === 'boolean';
+        const isSitePaid = runtime.isSitePaid === true;
+        const isTeamPaid = runtime.isTeamPaid === true || teamInfo?.isTeamPaid === true;
+
+        if (isSitePaid || isTeamPaid) {
+          return {
+            isFree: false,
+            source: 'runtime',
+            isSitePaid,
+            isTeamPaid,
+            teamInfoLoaded: !!teamInfo
+          };
+        }
+
+        if (!hasTeamInfoFlag) {
+          return {
+            isFree: false,
+            source: 'runtime-pending',
+            pending: true,
+            isSitePaid: false,
+            isTeamPaid: false,
+            teamInfoLoaded: false
+          };
+        }
 
         return {
-          isFree: runtime.isSitePaid === false && runtime.isTeamPaid === false,
+          isFree: true,
           source: 'runtime',
-          isSitePaid: runtime.isSitePaid === true,
-          isTeamPaid: runtime.isTeamPaid === true
+          isSitePaid: false,
+          isTeamPaid: false,
+          teamInfoLoaded: true
         };
       } catch {
         return null;
@@ -234,7 +267,23 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    return detectFromRuntime() || detectFromEmbedWidget() || { isFree: false, source: 'unknown' };
+    function detectOnce() {
+      const runtimeState = detectFromRuntime();
+      if (runtimeState?.pending) return runtimeState;
+      return runtimeState || detectFromEmbedWidget() || { isFree: false, source: 'unknown' };
+    }
+
+    return (async () => {
+      const startedAt = Date.now();
+      let state = detectOnce();
+
+      while (state?.pending && Date.now() - startedAt < PENDING_TIMEOUT) {
+        await sleep(RETRY_DELAY);
+        state = detectOnce();
+      }
+
+      return state || { isFree: false, source: 'unknown' };
+    })();
   }
 
   async function getActiveTabTariffState() {
@@ -1742,8 +1791,23 @@ document.addEventListener('DOMContentLoaded', () => {
       ? settings[storageKey].map((tab) => ({ ...tab }))
       : (option.defaultValue || []).map((tab) => ({ ...tab }));
 
+    function isDynamicBrowserTab(tab) {
+      return tab?.dynamicUrl === 'currentSite';
+    }
+
+    function isSameDefaultBrowserTab(tab, defaultTab) {
+      if (!tab || !defaultTab) return false;
+      if (tab.id === defaultTab.id) return true;
+      if (defaultTab.dynamicUrl) return tab.dynamicUrl === defaultTab.dynamicUrl;
+      return normalizeUrl(tab.url) === normalizeUrl(defaultTab.url);
+    }
+
+    tabs = tabs.filter((tab) => {
+      return !tab.deleted || !(option.defaultValue || []).some((defaultTab) => isSameDefaultBrowserTab(tab, defaultTab));
+    });
+
     (option.defaultValue || []).forEach((defaultTab) => {
-      const exists = tabs.some((tab) => tab.id === defaultTab.id || normalizeUrl(tab.url) === normalizeUrl(defaultTab.url));
+      const exists = tabs.some((tab) => isSameDefaultBrowserTab(tab, defaultTab));
       if (!exists) tabs.push({ ...defaultTab });
     });
 
@@ -1824,12 +1888,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const url = document.createElement('input');
         url.className = 'browser-tabs-option__url';
-        url.value = tab.url || '';
-        url.placeholder = 'https://example.com';
+        if (isDynamicBrowserTab(tab)) {
+          url.value = 'Автоматически: сайт проекта';
+          url.readOnly = true;
+          url.title = 'Адрес берется из текущего проекта';
+        } else {
+          url.value = tab.url || '';
+          url.placeholder = 'https://example.com';
+        }
 
         function commitField() {
-          tab.title = name.value.trim() || tab.title || 'Новая ссылка';
-          tab.url = normalizeUrl(url.value);
+          tab.title = name.value.trim() || tab.title || (isDynamicBrowserTab(tab) ? 'Сайт проекта' : 'Новая ссылка');
+          if (!isDynamicBrowserTab(tab)) tab.url = normalizeUrl(url.value);
           save();
         }
 

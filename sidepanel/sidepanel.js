@@ -21,6 +21,7 @@
     { id: 'full-hd', title: 'Full HD', width: 1920, height: 1080 }
   ];
   const DEFAULT_PINNED_LINKS = [
+    { id: 'project-site', title: 'Сайт проекта', url: '', active: true, dynamicUrl: 'currentSite' },
     { id: 'gemini', title: 'Gemini', url: 'https://gemini.google.com', active: true },
     { id: 'deepseek', title: 'Deepseek', url: 'https://chat.deepseek.com', active: false },
     { id: 'claude', title: 'Claude', url: 'https://claude.ai', active: false },
@@ -63,7 +64,9 @@
   let currentUrl = '';
   let currentTitle = '';
   let bookmarks = { version: 1, folders: [] };
+  let rawPinnedLinks = null;
   let pinnedLinks = [];
+  let projectSiteUrl = '';
 
   function localGet(key, fallback) {
     try {
@@ -130,15 +133,18 @@
   }
 
   function clonePinnedLinks(rawTabs) {
-    const source = Array.isArray(rawTabs) && rawTabs.length ? rawTabs.map((tab) => ({ ...tab })) : DEFAULT_PINNED_LINKS.map((tab) => ({ ...tab }));
+    let source = Array.isArray(rawTabs) && rawTabs.length ? rawTabs.map((tab) => ({ ...tab })) : DEFAULT_PINNED_LINKS.map((tab) => ({ ...tab }));
+    source = source.filter((tab) => {
+      return !tab?.deleted || !DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
+    });
 
     DEFAULT_PINNED_LINKS.forEach((defaultTab) => {
-      const exists = source.some((tab) => tab?.id === defaultTab.id || normalizeUrl(tab?.url || '') === normalizeUrl(defaultTab.url));
+      const exists = source.some((tab) => isSamePinnedDefault(tab, defaultTab));
       if (!exists) source.push({ ...defaultTab });
     });
 
     return source.map((tab, index) => {
-      const url = normalizeUrl(tab?.url || '');
+      const url = resolvePinnedLinkUrl(tab);
       if (!url || tab?.active === false || tab?.deleted) return null;
       return {
         id: String(tab?.id || 'pinned-' + index),
@@ -146,6 +152,26 @@
         url
       };
     }).filter(Boolean);
+  }
+
+  function isSamePinnedDefault(tab, defaultTab) {
+    if (!tab || !defaultTab) return false;
+    if (tab.id === defaultTab.id) return true;
+    if (defaultTab.dynamicUrl) return tab.dynamicUrl === defaultTab.dynamicUrl;
+    return normalizeUrl(tab.url || '') === normalizeUrl(defaultTab.url || '');
+  }
+
+  function resolvePinnedLinkUrl(tab) {
+    if (tab?.dynamicUrl === 'currentSite') return projectSiteUrl;
+    return normalizeUrl(tab?.url || '');
+  }
+
+  function setProjectSiteUrl(url) {
+    const normalized = normalizeUrl(url || '');
+    if (projectSiteUrl === normalized) return;
+    projectSiteUrl = normalized;
+    pinnedLinks = clonePinnedLinks(rawPinnedLinks);
+    if (!suggestions?.classList.contains('is-hidden')) showSuggestions();
   }
 
   function getActiveTab() {
@@ -234,6 +260,18 @@
         updatedAt: Date.now()
       });
       chrome.storage.local.set({ [HISTORY_KEY]: next.slice(0, HISTORY_LIMIT) }, renderHistoryHome);
+    });
+  }
+
+  function removeHistoryItem(url) {
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    chrome.storage.local.get({ [HISTORY_KEY]: [] }, (items) => {
+      const next = cloneHistory(items[HISTORY_KEY]).filter((item) => normalizeUrl(item.url) !== normalized);
+      chrome.storage.local.set({ [HISTORY_KEY]: next }, () => {
+        renderHistoryHome();
+        showSuggestions();
+      });
     });
   }
 
@@ -702,7 +740,23 @@
     return button;
   }
 
-  function suggestionItem(item) {
+  function addressFilterQuery() {
+    if (document.activeElement === addressInput && addressInput.selectionStart === 0 && addressInput.selectionEnd === addressInput.value.length) return '';
+    return String(addressInput.value || '').trim().toLowerCase();
+  }
+
+  function suggestionMatchesQuery(item, query) {
+    if (!query) return true;
+    const title = String(item?.title || '').toLowerCase();
+    const url = String(item?.url || '').toLowerCase();
+    return title.includes(query) || url.includes(query);
+  }
+
+  function historyEmptyText(query) {
+    return query ? 'Ничего не найдено' : 'Пока пусто';
+  }
+
+  function suggestionItem(item, kind) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'sidepanel-suggestion';
@@ -724,10 +778,31 @@
       navigate(item.url, item.title);
       hideSuggestions();
     });
-    return button;
+
+    if (kind !== 'history') return button;
+
+    const row = document.createElement('div');
+    row.className = 'sidepanel-suggestion-row';
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'sidepanel-suggestion-remove';
+    remove.setAttribute('aria-label', 'Удалить из истории');
+    remove.title = 'Удалить из истории';
+    remove.innerHTML = iconSvg('close');
+    remove.addEventListener('mousedown', (event) => event.preventDefault());
+    remove.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      removeHistoryItem(item.url);
+    });
+
+    row.appendChild(button);
+    row.appendChild(remove);
+    return row;
   }
 
-  function renderSuggestionList(kind, items) {
+  function renderSuggestionList(kind, items, emptyText) {
     const col = suggestions?.querySelector('[data-list="' + kind + '"]');
     const list = col?.querySelector('.sidepanel-suggestions-list');
     if (!col || !list) return;
@@ -736,19 +811,20 @@
     if (!items.length) {
       const empty = document.createElement('div');
       empty.className = 'sidepanel-suggestions-empty';
-      empty.textContent = kind === 'history' ? 'Пока пусто' : 'Нет ссылок';
+      empty.textContent = emptyText || (kind === 'history' ? 'Пока пусто' : 'Нет ссылок');
       list.appendChild(empty);
       return;
     }
 
-    items.forEach((item) => list.appendChild(suggestionItem(item)));
+    items.forEach((item) => list.appendChild(suggestionItem(item, kind)));
   }
 
   function showSuggestions() {
     if (!suggestions) return;
     chrome.storage.local.get({ [HISTORY_KEY]: [] }, (items) => {
-      const history = cloneHistory(items[HISTORY_KEY]);
-      renderSuggestionList('history', history);
+      const query = addressFilterQuery();
+      const history = cloneHistory(items[HISTORY_KEY]).filter((item) => suggestionMatchesQuery(item, query));
+      renderSuggestionList('history', history, historyEmptyText(query));
       renderSuggestionList('pinned', pinnedLinks);
       suggestions.classList.remove('is-hidden');
     });
@@ -829,6 +905,7 @@
     addressInput.select();
     showSuggestions();
   });
+  addressInput.addEventListener('input', showSuggestions);
   addressInput.addEventListener('click', showSuggestions);
   addressField.addEventListener('focusout', (event) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -867,6 +944,7 @@
 
   chrome.storage.sync.get({ [BOOKMARKS_KEY]: null, [PINNED_TABS_KEY]: null }, (items) => {
     bookmarks = cloneBookmarks(items[BOOKMARKS_KEY]);
+    rawPinnedLinks = items[PINNED_TABS_KEY];
     pinnedLinks = clonePinnedLinks(items[PINNED_TABS_KEY]);
     if (!items[BOOKMARKS_KEY]) saveBookmarks();
     chrome.storage.local.get({ [TABS_KEY]: [], [ACTIVE_TAB_KEY]: '' }, (localItems) => {
@@ -878,6 +956,7 @@
       setPanel(getActiveTab());
       chrome.storage.session.get(SESSION_KEY, (sessionItems) => {
         const payload = sessionItems[SESSION_KEY];
+        if (payload?.projectSiteUrl) setProjectSiteUrl(payload.projectSiteUrl);
         if (payload?.url) navigate(payload.url, payload.title);
       });
     });
@@ -886,6 +965,7 @@
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'session' && changes[SESSION_KEY]) {
       const payload = changes[SESSION_KEY].newValue;
+      if (payload?.projectSiteUrl) setProjectSiteUrl(payload.projectSiteUrl);
       if (payload?.url) navigate(payload.url, payload.title);
       return;
     }
@@ -896,7 +976,8 @@
       return;
     }
     if (areaName === 'sync' && changes[PINNED_TABS_KEY]) {
-      pinnedLinks = clonePinnedLinks(changes[PINNED_TABS_KEY].newValue);
+      rawPinnedLinks = changes[PINNED_TABS_KEY].newValue;
+      pinnedLinks = clonePinnedLinks(rawPinnedLinks);
       if (!suggestions?.classList.contains('is-hidden')) showSuggestions();
       return;
     }

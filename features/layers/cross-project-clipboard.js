@@ -24,6 +24,9 @@
 
   const originalSetItem = Storage.prototype.setItem;
   let applyingExternalClipboard = false;
+  let sourceClipboardRaw = '';
+  let suppressClipboardSaveDepth = 0;
+  let suppressClipboardSaveUntil = 0;
   let lastLocalWriteAt = 0;
   let runtimeRequire = null;
   let activeConflictDialog = null;
@@ -43,6 +46,51 @@
 
   function postToBridge(type, payload) {
     window.postMessage({ source: PAGE_SOURCE, type, payload }, '*');
+  }
+
+  function rememberSourceClipboardRaw(raw) {
+    const next = String(raw || '');
+    if (isLayerClipboardValue(next)) sourceClipboardRaw = next;
+  }
+
+  function isClipboardSaveSuppressed() {
+    return suppressClipboardSaveDepth > 0 || Date.now() < suppressClipboardSaveUntil;
+  }
+
+  function suppressClipboardSaveDuringPaste(callback) {
+    suppressClipboardSaveDepth += 1;
+    suppressClipboardSaveUntil = Date.now() + 1200;
+    try {
+      return callback();
+    } finally {
+      suppressClipboardSaveDepth = Math.max(0, suppressClipboardSaveDepth - 1);
+      suppressClipboardSaveUntil = Date.now() + 1200;
+    }
+  }
+
+  function setClipboardRaw(raw) {
+    if (!isLayerClipboardValue(raw)) return false;
+
+    applyingExternalClipboard = true;
+    try {
+      originalSetItem.call(localStorage, CLIPBOARD_KEY, String(raw));
+      syncNativeClipboardState();
+      scheduleNativeClipboardSync();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      applyingExternalClipboard = false;
+    }
+  }
+
+  function restoreSourceClipboardForPaste() {
+    const currentRaw = localStorage.getItem(CLIPBOARD_KEY);
+    if (sourceClipboardRaw && sourceClipboardRaw !== currentRaw && isLayerClipboardValue(sourceClipboardRaw)) {
+      setClipboardRaw(sourceClipboardRaw);
+      return sourceClipboardRaw;
+    }
+    return currentRaw;
   }
 
   function getRuntimeRequire() {
@@ -76,6 +124,8 @@
     try {
       return {
         clipboard: req(6269)?.A,
+        events: req(91893)?.A,
+        layers: req(39510)?.A,
         layout: req(36945)?.A,
         systemClassNames: req(71842)?.A?.classNames
       };
@@ -92,20 +142,71 @@
     return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  function normalizeClassToken(value) {
+    return String(value || '').trim().replace(/^\./, '');
+  }
+
+  function selectorClassNames(value) {
+    const names = new Set();
+    String(value || '').replace(/\.([_a-zA-Z-][_a-zA-Z0-9-]*)/g, (_, name) => {
+      if (name) names.add(name);
+      return '';
+    });
+    return names;
+  }
+
   function collectClassValues(collection) {
     const values = new Set();
-    const add = (item) => {
-      if (item?.value) values.add(String(item.value));
+    const addValue = (value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return;
+      if (raw.includes('.')) selectorClassNames(raw).forEach((name) => values.add(name));
+      if (/[.#:>+~,[\]()]/.test(raw)) return;
+      raw.split(/\s+/).forEach((token) => {
+        const normalized = normalizeClassToken(token);
+        if (normalized) values.add(normalized);
+      });
+    };
+    const add = (item, fallbackValue) => {
+      if (!item) return;
+      if (typeof item === 'string') addValue(item);
+      if (item?.value) addValue(item.value);
+      if (item?.name) addValue(item.name);
+      if (item?.className) addValue(item.className);
+      selectorClassNames(item?.selectorText || fallbackValue).forEach(addValue);
     };
 
     if (!collection) return values;
     if (Array.isArray(collection.list)) collection.list.forEach(add);
-    if (collection.map instanceof Map) collection.map.forEach(add);
-    if (collection.map && typeof collection.map === 'object') Object.values(collection.map).forEach(add);
+    if (collection.map instanceof Map) collection.map.forEach((item, key) => add(item, key));
+    if (collection.map && typeof collection.map.get === 'function' && typeof collection.map.forEach === 'function') {
+      try {
+        collection.map.forEach((item, key) => add(item, key));
+      } catch {}
+    }
+    if (collection.map && typeof collection.map === 'object') {
+      Object.entries(collection.map).forEach(([key, item]) => add(item, key));
+    }
+    if (typeof collection.forEach === 'function') {
+      try {
+        collection.forEach((item, key) => add(item, key));
+      } catch {}
+    }
+    if (typeof collection.values === 'function') {
+      try {
+        Array.from(collection.values()).forEach(add);
+      } catch {}
+    }
+    if (typeof collection.toArray === 'function') {
+      try {
+        collection.toArray().forEach(add);
+      } catch {}
+    }
     if (typeof collection.serialize === 'function') {
       try {
         const serialized = collection.serialize();
-        if (serialized?.map) Object.values(serialized.map).forEach(add);
+        if (Array.isArray(serialized?.list)) serialized.list.forEach(add);
+        if (serialized?.map) Object.entries(serialized.map).forEach(([key, item]) => add(item, key));
       } catch {}
     }
 
@@ -121,9 +222,36 @@
 
     if (!collection) return ids;
     if (Array.isArray(collection.list)) collection.list.forEach(add);
-    if (collection.map instanceof Map) collection.map.forEach(add);
+    if (collection.map instanceof Map) collection.map.forEach((item, id) => add(item, id));
+    if (collection.map && typeof collection.map.get === 'function' && typeof collection.map.forEach === 'function') {
+      try {
+        collection.map.forEach((item, id) => add(item, id));
+      } catch {}
+    }
     if (collection.map && typeof collection.map === 'object') {
       Object.entries(collection.map).forEach(([id, item]) => add(item, id));
+    }
+    if (typeof collection.forEach === 'function') {
+      try {
+        collection.forEach((item, id) => add(item, id));
+      } catch {}
+    }
+    if (typeof collection.values === 'function') {
+      try {
+        Array.from(collection.values()).forEach(add);
+      } catch {}
+    }
+    if (typeof collection.toArray === 'function') {
+      try {
+        collection.toArray().forEach(add);
+      } catch {}
+    }
+    if (typeof collection.serialize === 'function') {
+      try {
+        const serialized = collection.serialize();
+        if (Array.isArray(serialized?.list)) serialized.list.forEach(add);
+        if (serialized?.map) Object.entries(serialized.map).forEach(([id, item]) => add(item, id));
+      } catch {}
     }
 
     return ids;
@@ -146,14 +274,34 @@
   function getCurrentClassNames() {
     const api = getTaptopApi();
     const values = new Set();
-    collectUserClassValues(api?.layout?.mainClassNameCollection).forEach((value) => values.add(value));
+    [
+      api?.layout?.classNameManager,
+      api?.layout?.mainClassNameCollection,
+      api?.layout?.designClassNameCollection,
+      api?.layout?.mainSelectorCollection,
+      api?.layout?.designSelectorCollection,
+      api?.layout?.cmSelectorCollection,
+      api?.layout?.animationSelectorCollection
+    ].forEach((collection) => {
+      collectUserClassValues(collection).forEach((value) => values.add(value));
+    });
     return values;
   }
 
   function getImportedClassNames(data) {
     const values = new Set();
     const layout = data?.copiedLayout;
-    collectUserClassValues(layout?.mainClassNameCollection).forEach((value) => values.add(value));
+    [
+      layout?.classNameManager,
+      layout?.mainClassNameCollection,
+      layout?.designClassNameCollection,
+      layout?.mainSelectorCollection,
+      layout?.designSelectorCollection,
+      layout?.cmSelectorCollection,
+      layout?.animationSelectorCollection
+    ].forEach((collection) => {
+      collectUserClassValues(collection).forEach((value) => values.add(value));
+    });
     return values;
   }
 
@@ -163,8 +311,10 @@
     [
       api?.layout?.mainClassNameCollection,
       api?.layout?.designClassNameCollection,
+      api?.layout?.classNameManager,
       data?.copiedLayout?.mainClassNameCollection,
-      data?.copiedLayout?.designClassNameCollection
+      data?.copiedLayout?.designClassNameCollection,
+      data?.copiedLayout?.classNameManager
     ].forEach((collection) => {
       collectClassIds(collection).forEach((id) => values.add(id));
     });
@@ -369,8 +519,42 @@
     });
   }
 
+  function emitLayoutChanged(api = getTaptopApi()) {
+    try {
+      api?.layers?.setMap?.();
+    } catch {}
+
+    try {
+      const events = api?.events;
+      [
+        events?.ON_HTML_UPDATE,
+        events?.ON_CSS_CHANGE,
+        events?.ON_CHANGE_TAG_DISPLAY,
+        events?.ON_CHANGE,
+        events?.ON_CHANGE_TAG,
+        events?.ON_CHANGE_TAG_DATA,
+        events?.ON_UPDATE,
+        events?.ON_DATA_CHANGE
+      ].forEach((eventName) => {
+        if (eventName === events?.ON_CSS_CHANGE) events.emit?.(eventName, null, true);
+        else if (eventName) events.emit?.(eventName);
+      });
+    } catch {}
+
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch {}
+  }
+
+  function scheduleLayoutRefresh() {
+    [0, 80, 250, 700].forEach((delay) => {
+      setTimeout(() => emitLayoutChanged(), delay);
+    });
+  }
+
   function saveClipboard(raw) {
     if (!isLayerClipboardValue(raw)) return;
+    rememberSourceClipboardRaw(raw);
     postToBridge('save', {
       raw: String(raw),
       savedAt: Date.now(),
@@ -383,6 +567,7 @@
     if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return;
     if (payload.savedAt && payload.savedAt < lastLocalWriteAt) return;
 
+    rememberSourceClipboardRaw(payload.raw);
     try {
       applyingExternalClipboard = true;
       originalSetItem.call(localStorage, CLIPBOARD_KEY, String(payload.raw));
@@ -394,21 +579,7 @@
     }
   }
 
-  async function resolveCurrentClipboardBeforePaste() {
-    const raw = localStorage.getItem(CLIPBOARD_KEY);
-    if (!raw || !isLayerClipboardValue(raw)) return true;
-
-    let data = null;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return true;
-    }
-
-    const conflicts = getClassConflicts(data);
-    if (!conflicts.length) return true;
-
-    const mode = await chooseClassConflictMode(conflicts);
+  function applyClassConflictMode(data, conflicts, mode) {
     if (mode === 'cancel') return false;
 
     if (mode === 'project') return true;
@@ -426,6 +597,28 @@
     return true;
   }
 
+  function resolveCurrentClipboardBeforePaste() {
+    const raw = restoreSourceClipboardForPaste();
+    if (!raw || !isLayerClipboardValue(raw)) return true;
+
+    let data = null;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return true;
+    }
+
+    const conflicts = getClassConflicts(data);
+    if (!conflicts.length) return true;
+
+    return chooseClassConflictMode(conflicts)
+      .then((mode) => applyClassConflictMode(data, conflicts, mode));
+  }
+
+  function isPromiseLike(value) {
+    return !!value && typeof value.then === 'function';
+  }
+
   function installPastePatch() {
     const clipboard = getTaptopApi()?.clipboard;
     if (!clipboard || typeof clipboard.pasteFromClipboard !== 'function') return false;
@@ -434,16 +627,33 @@
     patchedClipboard = clipboard;
     originalPasteFromClipboard = clipboard.pasteFromClipboard;
 
-    const patchedPasteFromClipboard = async function (...args) {
+    const patchedPasteFromClipboard = function (...args) {
       if (resolvingPaste) return originalPasteFromClipboard.apply(this, args);
 
       resolvingPaste = true;
+      const runPaste = () => {
+        const shouldRefreshLayout = isLayerClipboardValue(localStorage.getItem(CLIPBOARD_KEY));
+        const pasted = suppressClipboardSaveDuringPaste(() => originalPasteFromClipboard.apply(this, args));
+        if (shouldRefreshLayout) scheduleLayoutRefresh();
+        return pasted;
+      };
+
+      let isAsyncDecision = false;
       try {
-        const canPaste = await resolveCurrentClipboardBeforePaste();
+        const canPaste = resolveCurrentClipboardBeforePaste();
+        if (isPromiseLike(canPaste)) {
+          isAsyncDecision = true;
+          return canPaste
+            .then((resolvedCanPaste) => (resolvedCanPaste ? runPaste() : null))
+            .finally(() => {
+              resolvingPaste = false;
+            });
+        }
+
         if (!canPaste) return null;
-        return await originalPasteFromClipboard.apply(this, args);
+        return runPaste();
       } finally {
-        resolvingPaste = false;
+        if (!isAsyncDecision) resolvingPaste = false;
       }
     };
 
@@ -456,6 +666,11 @@
     const result = originalSetItem.apply(this, arguments);
 
     if (this === localStorage && String(key) === CLIPBOARD_KEY && !applyingExternalClipboard) {
+      if (isClipboardSaveSuppressed()) {
+        scheduleNativeClipboardSync();
+        return result;
+      }
+
       lastLocalWriteAt = Date.now();
       scheduleNativeClipboardSync();
       saveClipboard(value);
@@ -478,14 +693,8 @@
   Storage.prototype.setItem = patchedSetItem;
   window.addEventListener('message', onMessage);
   postToBridge('load');
-  if (!installPastePatch()) {
-    pastePatchTimer = window.setInterval(() => {
-      if (installPastePatch()) {
-        clearInterval(pastePatchTimer);
-        pastePatchTimer = 0;
-      }
-    }, 300);
-  }
+  installPastePatch();
+  pastePatchTimer = window.setInterval(installPastePatch, 300);
 
   window[STATE_KEY] = {
     destroy() {

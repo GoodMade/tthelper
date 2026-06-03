@@ -252,6 +252,7 @@ const featuresConfig = {
         isolated_deinit: "features/mini-browser/browser-panel.deinit.js",
         dnrRulesets: ["gemini_frame_rules"],
         defaultValue: [
+          { id: "project-site", title: "Сайт проекта", url: "", active: true, dynamicUrl: "currentSite" },
           { id: "gemini", title: "Gemini", url: "https://gemini.google.com", active: true },
           { id: "deepseek", title: "Deepseek", url: "https://chat.deepseek.com", active: false },
           { id: "claude", title: "Claude", url: "https://claude.ai", active: false },

@@ -99,9 +99,15 @@
   function isFreePlanActive() {
     const runtime = getTaptopRuntime();
     const hasSiteFlag = typeof runtime?.isSitePaid === 'boolean';
-    const hasTeamFlag = typeof runtime?.isTeamPaid === 'boolean';
-    if (hasSiteFlag && hasTeamFlag) {
-      return runtime.isSitePaid === false && runtime.isTeamPaid === false;
+    if (hasSiteFlag) {
+      const teamInfo = runtime?.teamInfo || null;
+      const hasTeamInfoFlag = typeof teamInfo?.isTeamPaid === 'boolean';
+      const isSitePaid = runtime.isSitePaid === true;
+      const isTeamPaid = runtime.isTeamPaid === true || teamInfo?.isTeamPaid === true;
+
+      if (isSitePaid || isTeamPaid) return false;
+      if (!hasTeamInfoFlag) return false;
+      return true;
     }
     return detectFreePlanFromEmbedWidget();
   }
@@ -138,20 +144,71 @@
     return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  function normalizeClassToken(value) {
+    return String(value || '').trim().replace(/^\./, '');
+  }
+
+  function selectorClassNames(value) {
+    const names = new Set();
+    String(value || '').replace(/\.([_a-zA-Z-][_a-zA-Z0-9-]*)/g, (_, name) => {
+      if (name) names.add(name);
+      return '';
+    });
+    return names;
+  }
+
   function collectClassValues(collection) {
     const values = new Set();
-    const add = (item) => {
-      if (item?.value) values.add(String(item.value));
+    const addValue = (value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return;
+      if (raw.includes('.')) selectorClassNames(raw).forEach((name) => values.add(name));
+      if (/[.#:>+~,[\]()]/.test(raw)) return;
+      raw.split(/\s+/).forEach((token) => {
+        const normalized = normalizeClassToken(token);
+        if (normalized) values.add(normalized);
+      });
+    };
+    const add = (item, fallbackValue) => {
+      if (!item) return;
+      if (typeof item === 'string') addValue(item);
+      if (item?.value) addValue(item.value);
+      if (item?.name) addValue(item.name);
+      if (item?.className) addValue(item.className);
+      selectorClassNames(item?.selectorText || fallbackValue).forEach(addValue);
     };
 
     if (!collection) return values;
     if (Array.isArray(collection.list)) collection.list.forEach(add);
-    if (collection.map instanceof Map) collection.map.forEach(add);
-    if (collection.map && typeof collection.map === 'object') Object.values(collection.map).forEach(add);
+    if (collection.map instanceof Map) collection.map.forEach((item, key) => add(item, key));
+    if (collection.map && typeof collection.map.get === 'function' && typeof collection.map.forEach === 'function') {
+      try {
+        collection.map.forEach((item, key) => add(item, key));
+      } catch {}
+    }
+    if (collection.map && typeof collection.map === 'object') {
+      Object.entries(collection.map).forEach(([key, item]) => add(item, key));
+    }
+    if (typeof collection.forEach === 'function') {
+      try {
+        collection.forEach((item, key) => add(item, key));
+      } catch {}
+    }
+    if (typeof collection.values === 'function') {
+      try {
+        Array.from(collection.values()).forEach(add);
+      } catch {}
+    }
+    if (typeof collection.toArray === 'function') {
+      try {
+        collection.toArray().forEach(add);
+      } catch {}
+    }
     if (typeof collection.serialize === 'function') {
       try {
         const serialized = collection.serialize();
-        if (serialized?.map) Object.values(serialized.map).forEach(add);
+        if (Array.isArray(serialized?.list)) serialized.list.forEach(add);
+        if (serialized?.map) Object.entries(serialized.map).forEach(([key, item]) => add(item, key));
       } catch {}
     }
 
@@ -167,9 +224,36 @@
 
     if (!collection) return ids;
     if (Array.isArray(collection.list)) collection.list.forEach(add);
-    if (collection.map instanceof Map) collection.map.forEach(add);
+    if (collection.map instanceof Map) collection.map.forEach((item, id) => add(item, id));
+    if (collection.map && typeof collection.map.get === 'function' && typeof collection.map.forEach === 'function') {
+      try {
+        collection.map.forEach((item, id) => add(item, id));
+      } catch {}
+    }
     if (collection.map && typeof collection.map === 'object') {
       Object.entries(collection.map).forEach(([id, item]) => add(item, id));
+    }
+    if (typeof collection.forEach === 'function') {
+      try {
+        collection.forEach((item, id) => add(item, id));
+      } catch {}
+    }
+    if (typeof collection.values === 'function') {
+      try {
+        Array.from(collection.values()).forEach(add);
+      } catch {}
+    }
+    if (typeof collection.toArray === 'function') {
+      try {
+        collection.toArray().forEach(add);
+      } catch {}
+    }
+    if (typeof collection.serialize === 'function') {
+      try {
+        const serialized = collection.serialize();
+        if (Array.isArray(serialized?.list)) serialized.list.forEach(add);
+        if (serialized?.map) Object.entries(serialized.map).forEach(([id, item]) => add(item, id));
+      } catch {}
     }
 
     return ids;
@@ -192,14 +276,34 @@
   function getCurrentClassNames() {
     const api = getTaptopApi();
     const values = new Set();
-    collectUserClassValues(api?.layout?.mainClassNameCollection).forEach((value) => values.add(value));
+    [
+      api?.layout?.classNameManager,
+      api?.layout?.mainClassNameCollection,
+      api?.layout?.designClassNameCollection,
+      api?.layout?.mainSelectorCollection,
+      api?.layout?.designSelectorCollection,
+      api?.layout?.cmSelectorCollection,
+      api?.layout?.animationSelectorCollection
+    ].forEach((collection) => {
+      collectUserClassValues(collection).forEach((value) => values.add(value));
+    });
     return values;
   }
 
   function getImportedClassNames(data) {
     const values = new Set();
     const layout = data?.copiedLayout;
-    collectUserClassValues(layout?.mainClassNameCollection).forEach((value) => values.add(value));
+    [
+      layout?.classNameManager,
+      layout?.mainClassNameCollection,
+      layout?.designClassNameCollection,
+      layout?.mainSelectorCollection,
+      layout?.designSelectorCollection,
+      layout?.cmSelectorCollection,
+      layout?.animationSelectorCollection
+    ].forEach((collection) => {
+      collectUserClassValues(collection).forEach((value) => values.add(value));
+    });
     return values;
   }
 
@@ -209,8 +313,10 @@
     [
       api?.layout?.mainClassNameCollection,
       api?.layout?.designClassNameCollection,
+      api?.layout?.classNameManager,
       data?.copiedLayout?.mainClassNameCollection,
-      data?.copiedLayout?.designClassNameCollection
+      data?.copiedLayout?.designClassNameCollection,
+      data?.copiedLayout?.classNameManager
     ].forEach((collection) => {
       collectClassIds(collection).forEach((id) => values.add(id));
     });

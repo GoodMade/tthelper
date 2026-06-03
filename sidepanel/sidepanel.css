@@ -353,6 +353,19 @@ body {
   background: #aeb3b8;
 }
 
+.sidepanel-suggestion-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border-radius: 5px;
+}
+
+.sidepanel-suggestion-row:hover {
+  background: #f1f3f4;
+}
+
 .sidepanel-suggestion {
   display: grid;
   gap: 1px;
@@ -369,6 +382,43 @@ body {
 
 .sidepanel-suggestion:hover {
   background: #f1f3f4;
+}
+
+.sidepanel-suggestion-row .sidepanel-suggestion:hover {
+  background: transparent;
+}
+
+.sidepanel-suggestion-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidepanel-suggestion-row:hover .sidepanel-suggestion-remove,
+.sidepanel-suggestion-row:focus-within .sidepanel-suggestion-remove {
+  opacity: 0.72;
+  pointer-events: auto;
+}
+
+.sidepanel-suggestion-remove:hover {
+  background: #f1f3f4;
+  color: #3c4043;
+  opacity: 1;
+}
+
+.sidepanel-suggestion-remove svg {
+  width: 16px;
+  height: 16px;
 }
 
 .sidepanel-suggestion-title,

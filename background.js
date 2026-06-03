@@ -8,7 +8,7 @@ const CMS_CONTENT_SCRIPT_MATCHES = [
   'https://*/-/cms/*'
 ];
 const DVH_PRELOAD_CONTENT_SCRIPT_ID = 'tt-enhancer-dvh-preload';
-const FREE_PLAN_PAID_RESTORE_DONE_KEY = 'ttFreePlanPaidRestoreDoneV2';
+const FREE_PLAN_PAID_RESTORE_DONE_KEY = 'ttFreePlanPaidRestoreDoneV3';
 
 async function syncDvhPreloadContentScript(settings) {
   if (!chrome.scripting?.registerContentScripts) return;
@@ -986,12 +986,19 @@ function getOptionValueForTariff(settings, storageKey, option, tariffState) {
 
 function isOptionEnabled(option, value) {
   if (option.type === 'browserTabs') {
-    return Array.isArray(value) && value.some(tab => tab && tab.active !== false && tab.url);
+    return true;
   }
   return !!value;
 }
 
 function detectTaptopFreePlanInPage() {
+  const PENDING_TIMEOUT = 2500;
+  const RETRY_DELAY = 150;
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   function detectFromRuntime() {
     try {
       const chunk = window.rspackChunktaptop_design_editor;
@@ -1005,14 +1012,40 @@ function detectTaptopFreePlanInPage() {
 
       const runtime = runtimeRequire?.(87621)?.A;
       const hasSiteFlag = typeof runtime?.isSitePaid === 'boolean';
-      const hasTeamFlag = typeof runtime?.isTeamPaid === 'boolean';
-      if (!hasSiteFlag || !hasTeamFlag) return null;
+      if (!hasSiteFlag) return null;
+
+      const teamInfo = runtime?.teamInfo || null;
+      const hasTeamInfoFlag = typeof teamInfo?.isTeamPaid === 'boolean';
+      const isSitePaid = runtime.isSitePaid === true;
+      const isTeamPaid = runtime.isTeamPaid === true || teamInfo?.isTeamPaid === true;
+
+      if (isSitePaid || isTeamPaid) {
+        return {
+          isFree: false,
+          source: 'runtime',
+          isSitePaid,
+          isTeamPaid,
+          teamInfoLoaded: !!teamInfo
+        };
+      }
+
+      if (!hasTeamInfoFlag) {
+        return {
+          isFree: false,
+          source: 'runtime-pending',
+          pending: true,
+          isSitePaid: false,
+          isTeamPaid: false,
+          teamInfoLoaded: false
+        };
+      }
 
       return {
-        isFree: runtime.isSitePaid === false && runtime.isTeamPaid === false,
+        isFree: true,
         source: 'runtime',
-        isSitePaid: runtime.isSitePaid === true,
-        isTeamPaid: runtime.isTeamPaid === true
+        isSitePaid: false,
+        isTeamPaid: false,
+        teamInfoLoaded: true
       };
     } catch {
       return null;
@@ -1043,7 +1076,23 @@ function detectTaptopFreePlanInPage() {
     }
   }
 
-  return detectFromRuntime() || detectFromEmbedWidget() || { isFree: false, source: 'unknown' };
+  function detectOnce() {
+    const runtimeState = detectFromRuntime();
+    if (runtimeState?.pending) return runtimeState;
+    return runtimeState || detectFromEmbedWidget() || { isFree: false, source: 'unknown' };
+  }
+
+  return (async () => {
+    const startedAt = Date.now();
+    let state = detectOnce();
+
+    while (state?.pending && Date.now() - startedAt < PENDING_TIMEOUT) {
+      await sleep(RETRY_DELAY);
+      state = detectOnce();
+    }
+
+    return state || { isFree: false, source: 'unknown' };
+  })();
 }
 
 async function getTabTariffState(tabId) {
@@ -1165,6 +1214,7 @@ function getState(tabId) {
 
 async function openMiniBrowserSidePanel(req, sender, sendResponse) {
   const url = String(req?.url || '').trim();
+  const projectSiteUrl = String(req?.projectSiteUrl || '').trim();
   if (!chrome.sidePanel?.open) {
     sendResponse?.({ ok: false, error: 'Side Panel API недоступен' });
     return;
@@ -1180,11 +1230,12 @@ async function openMiniBrowserSidePanel(req, sender, sendResponse) {
     // Любой await до него может сбросить user activation в Chrome.
     const openPromise = chrome.sidePanel.open({ windowId: sender.tab.windowId });
 
-    if (url) {
+    if (url || projectSiteUrl) {
       await chrome.storage.session.set({
         ttMiniBrowserSidePanel: {
           url,
           title: String(req.title || url),
+          projectSiteUrl,
           updatedAt: Date.now()
         }
       });
@@ -1199,7 +1250,7 @@ async function openMiniBrowserSidePanel(req, sender, sendResponse) {
 }
 
 function openMiniBrowserSidePanelLast(req, sender, sendResponse) {
-  openMiniBrowserSidePanel({ url: '' }, sender, sendResponse);
+  openMiniBrowserSidePanel({ url: '', projectSiteUrl: req?.projectSiteUrl || '' }, sender, sendResponse);
 }
 
 function decodeHtmlEntities(value) {
