@@ -274,6 +274,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return isFreePlanActive() && option?.disabledOnFreePlan === true;
   }
 
+  function getOptionDisplayLabel(option) {
+    if (isFreePlanActive() && option?.freePlanLabel) return option.freePlanLabel;
+    return option?.label || '';
+  }
+
+  function getOptionDisplayTooltip(option) {
+    if (isFreePlanActive() && option?.freePlanTooltip) return option.freePlanTooltip;
+    return option?.tooltip || '';
+  }
+
   function getConfiguredOptionValue(settings, storageKey, option) {
     if (Object.prototype.hasOwnProperty.call(settings, storageKey)) return settings[storageKey];
     if (option.fallbackStorageKey && Object.prototype.hasOwnProperty.call(settings, option.fallbackStorageKey)) {
@@ -1048,17 +1058,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const labelText = document.createElement('span');
     labelText.className = 'option-label-text';
-    labelText.textContent = option.label;
+    labelText.textContent = getOptionDisplayLabel(option);
 
     label.appendChild(cb);
     label.appendChild(labelText);
 
-    if (option.tooltip) {
+    const tooltip = getOptionDisplayTooltip(option);
+    if (tooltip) {
       const help = document.createElement('span');
       help.className = 'option-help';
       help.textContent = '?';
-      help.setAttribute('aria-label', option.tooltip);
-      help.dataset.tooltip = option.tooltip;
+      help.setAttribute('aria-label', tooltip);
+      help.dataset.tooltip = tooltip;
       help.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -1411,6 +1422,55 @@ document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => nameInput.focus());
     }
 
+    function deleteLocalWidget(source, widgetName) {
+      if (!source?.id || source.type !== 'local') return;
+
+      const normalizedName = normalizeLocalWidgetName(widgetName);
+      if (!normalizedName) return;
+
+      const nextCache = Object.assign({}, widgetCache || {});
+      const current = isWidgetSourceCacheValid(source, nextCache[source.id])
+        ? nextCache[source.id]
+        : null;
+      if (!current) return;
+
+      const files = Object.assign({}, current.files || {});
+      delete files[widgetName];
+      delete files[normalizedName];
+
+      const widgets = (current.widgets || [])
+        .filter((widget) => normalizeLocalWidgetName(widget?.name || widget) !== normalizedName);
+
+      nextCache[source.id] = Object.assign({}, current, {
+        widgets,
+        files,
+        syncedAt: Date.now()
+      });
+
+      chrome.storage.local.set({ [WIDGET_CACHE_KEY]: nextCache }, () => {
+        const error = getLastError();
+        if (error) {
+          alert(error.message || 'Не удалось удалить локальный виджет.');
+          return;
+        }
+
+        widgetCache = nextCache;
+        const disabledKeys = [
+          getWidgetSourceWidgetKey(source, widgetName),
+          getWidgetSourceWidgetKey(source, normalizedName)
+        ];
+        const hadDisabled = disabledKeys.some((key) => disabledWidgets[key]);
+        disabledKeys.forEach((key) => delete disabledWidgets[key]);
+
+        if (hadDisabled) {
+          saveDisabledWidgets(draw);
+        } else {
+          refreshCurrentTabFeatures();
+          draw();
+        }
+      });
+    }
+
     function buildWidgetSourceWidgetsPanel(source, status) {
       const widgets = getCachedWidgetNamesForSource(source, widgetCache);
       const isSyncing = status?.state === 'syncing';
@@ -1489,6 +1549,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
           label.appendChild(checkbox);
           label.appendChild(name);
+          if (isLocalSource) {
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'widget-source-widgets__delete';
+            remove.setAttribute('aria-label', `Удалить виджет ${widgetName}`);
+            remove.title = 'Удалить виджет';
+            remove.textContent = '×';
+            remove.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              deleteLocalWidget(source, widgetName);
+            });
+            label.appendChild(remove);
+          }
           widgetList.appendChild(label);
         });
 
@@ -1933,17 +2007,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const labelText = document.createElement('span');
         labelText.className = 'option-label-text';
-        labelText.textContent = option.label;
+        labelText.textContent = getOptionDisplayLabel(option);
 
         label.appendChild(cb);
         label.appendChild(labelText);
 
-        if (option.tooltip) {
+        const tooltip = getOptionDisplayTooltip(option);
+        if (tooltip) {
           const help = document.createElement('span');
           help.className = 'option-help';
           help.textContent = '?';
-          help.setAttribute('aria-label', option.tooltip);
-          help.dataset.tooltip = option.tooltip;
+          help.setAttribute('aria-label', tooltip);
+          help.dataset.tooltip = tooltip;
           help.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();

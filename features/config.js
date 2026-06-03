@@ -160,6 +160,7 @@ const featuresConfig = {
     options: {
       crossProjectClipboard: {
         label: "Копирование слоёв между проектами",
+        disabledOnFreePlan: true,
         storageKey: "uiLayers_crossProjectClipboard",
         js: ["features/layers/cross-project-clipboard.js"],
         isolated_js: ["features/layers/cross-project-clipboard-bridge.js"],
@@ -169,6 +170,9 @@ const featuresConfig = {
       },
       jsonTransfer: {
         label: "Экспорт/импорт слоёв JSON",
+        tooltip: "Добавляет экспорт выбранного слоя в JSON и импорт JSON в буфер.",
+        freePlanLabel: "Экспорт слоёв JSON",
+        freePlanTooltip: "На бесплатном тарифе доступен только экспорт слоев JSON. Импорт JSON остается для платного тарифа.",
         storageKey: "uiLayers_jsonTransfer",
         css: ["features/layers/json-transfer.css"],
         js: ["features/layers/json-transfer.js"],

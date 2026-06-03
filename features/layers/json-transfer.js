@@ -49,6 +49,17 @@
     return runtimeRequire;
   }
 
+  function getTaptopRuntime() {
+    const req = getRuntimeRequire();
+    if (!req) return null;
+
+    try {
+      return req(87621)?.A || null;
+    } catch {
+      return null;
+    }
+  }
+
   function getTaptopApi() {
     const req = getRuntimeRequire();
     if (!req) return null;
@@ -58,13 +69,49 @@
         clipboard: req(6269)?.A,
         clipboardStore: req(34369)?.N,
         layout: req(36945)?.A,
-        runtime: req(87621)?.A,
+        runtime: getTaptopRuntime(),
         actionCopy: req(89224)?.aI?.COPY_COMPONENT,
         systemClassNames: req(71842)?.A?.classNames
       };
     } catch {
       return null;
     }
+  }
+
+  function detectFreePlanFromEmbedWidget() {
+    try {
+      const items = Array.from(document.querySelectorAll('.tt-widgets__list .tt-widgets__item, .tt-widgets__item'));
+      const embedItem = items.find((item) => {
+        const name = String(item.querySelector('.tt-widgets__name')?.textContent || '').trim();
+        const hasEmbedIcon = Array.from(item.querySelectorAll('use')).some((use) => {
+          const href = use.getAttribute('href') || use.getAttribute('xlink:href') || '';
+          return href.includes('medium-widgets-embed');
+        });
+        return name === 'Embed' || hasEmbedIcon;
+      });
+      if (!embedItem) return false;
+      return embedItem.classList.contains('is-disabled') || embedItem.getAttribute('aria-disabled') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  function isFreePlanActive() {
+    const runtime = getTaptopRuntime();
+    const hasSiteFlag = typeof runtime?.isSitePaid === 'boolean';
+    const hasTeamFlag = typeof runtime?.isTeamPaid === 'boolean';
+    if (hasSiteFlag && hasTeamFlag) {
+      return runtime.isSitePaid === false && runtime.isTeamPaid === false;
+    }
+    return detectFreePlanFromEmbedWidget();
+  }
+
+  function isJsonImportBlockedByFreePlan() {
+    return isFreePlanActive();
+  }
+
+  function showJsonImportBlockedToast() {
+    showToast('Импорт JSON недоступен на бесплатном тарифе');
   }
 
   function isLayerClipboard(data) {
@@ -419,6 +466,11 @@
   }
 
   async function importClipboardData(data) {
+    if (isJsonImportBlockedByFreePlan()) {
+      showJsonImportBlockedToast();
+      return;
+    }
+
     const api = getTaptopApi();
     const currentVersion = api?.layout?.tree?.version;
     const importedVersion = data?.copiedLayout?.tree?.version;
@@ -440,6 +492,10 @@
 
   function importJsonFile(file) {
     if (!file) return;
+    if (isJsonImportBlockedByFreePlan()) {
+      showJsonImportBlockedToast();
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -475,6 +531,7 @@
   }
 
   function syncSettingsExportVisibility() {
+    syncTopImportAvailability();
     const hasLayer = hasSelectedLayer();
     document.querySelectorAll(`.${SETTINGS_CLASS}`).forEach((panel) => {
       syncSettingsExportPanel(panel, hasLayer);
@@ -519,7 +576,13 @@
     importButton.title = 'Импорт слоя из JSON в буфер';
     importButton.setAttribute('aria-label', 'Импорт слоя из JSON в буфер');
     importButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>';
-    importButton.addEventListener('click', () => importInput.click());
+    importButton.addEventListener('click', () => {
+      if (isJsonImportBlockedByFreePlan()) {
+        showJsonImportBlockedToast();
+        return;
+      }
+      importInput.click();
+    });
 
     wrap.append(importButton, importInput);
     return wrap;
@@ -584,11 +647,25 @@
 
   function mountTopImport() {
     const rightBlock = findRightBlock();
-    if (!rightBlock) return false;
+    if (!rightBlock) {
+      syncTopImportAvailability();
+      return false;
+    }
+
+    if (isJsonImportBlockedByFreePlan()) {
+      rightBlock.querySelector(`.${ROOT_CLASS}`)?.remove();
+      return true;
+    }
+
     if (!rightBlock.querySelector(`.${ROOT_CLASS}`)) {
       rightBlock.prepend(buildControls());
     }
     return true;
+  }
+
+  function syncTopImportAvailability() {
+    if (!isJsonImportBlockedByFreePlan()) return;
+    document.querySelectorAll(`.${ROOT_CLASS}`).forEach((node) => node.remove());
   }
 
   function mountAll() {
@@ -633,6 +710,7 @@
   }
 
   mountAll();
+  startSettingsExportVisibilitySync();
   mountObserver = new MutationObserver((mutations) => {
     const onlyOwnElements = mutations.every((mutation) => {
       if (mutation.target instanceof HTMLElement && mutation.target.closest(`.${ROOT_CLASS}, .${SETTINGS_CLASS}`)) {
