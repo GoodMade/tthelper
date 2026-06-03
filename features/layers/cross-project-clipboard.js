@@ -31,7 +31,6 @@
   let patchedClipboard = null;
   let originalPasteFromClipboard = null;
   let resolvingPaste = false;
-  let lastProjectClassChoiceRaw = '';
 
   function isLayerClipboardValue(value) {
     try {
@@ -397,7 +396,7 @@
 
   async function resolveCurrentClipboardBeforePaste() {
     const raw = localStorage.getItem(CLIPBOARD_KEY);
-    if (!raw || !isLayerClipboardValue(raw) || raw === lastProjectClassChoiceRaw) return true;
+    if (!raw || !isLayerClipboardValue(raw)) return true;
 
     let data = null;
     try {
@@ -412,10 +411,7 @@
     const mode = await chooseClassConflictMode(conflicts);
     if (mode === 'cancel') return false;
 
-    if (mode === 'project') {
-      lastProjectClassChoiceRaw = raw;
-      return true;
-    }
+    if (mode === 'project') return true;
 
     const nextData = createClassCopies(data, conflicts);
     applyingExternalClipboard = true;
