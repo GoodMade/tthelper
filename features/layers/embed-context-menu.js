@@ -29,6 +29,7 @@
   const GITHUB_WIDGET_BRIDGE_SOURCE = 'tt-enhancer-github-widgets-bridge';
   const GITHUB_WIDGETS_JSDELIVR_INDEX_URL = 'https://data.jsdelivr.com/v1/packages/gh/GoodMade/tthelper_data@main?structure=flat';
   const GITHUB_WIDGETS_CDN_ROOT = 'https://cdn.jsdelivr.net/gh/GoodMade/tthelper_data@main/widgets';
+  const GITHUB_WIDGETS_RAW_ROOT = 'https://raw.githubusercontent.com/GoodMade/tthelper_data/main/widgets';
   const DEFAULT_GITHUB_WIDGET_SOURCE_ID = 'tthelper_data';
   const DEFAULT_GITHUB_WIDGET_SOURCE_TITLE = 'TapTop Helper';
   const featureFlags = window[FEATURE_FLAGS_KEY] || { inlineEdit: true, scriptWidget: true };
@@ -1191,9 +1192,10 @@
     );
   }
 
-  function getGithubRawUrl(widgetName, fileName) {
+  function getGithubRawUrl(widgetName, fileName, options = {}) {
     if (!isValidGithubWidgetName(widgetName)) return '';
-    return `${GITHUB_WIDGETS_CDN_ROOT}/${encodeURIComponent(widgetName)}/${encodeURIComponent(fileName)}`;
+    const root = options.preferRaw ? GITHUB_WIDGETS_RAW_ROOT : GITHUB_WIDGETS_CDN_ROOT;
+    return `${root}/${encodeURIComponent(widgetName)}/${encodeURIComponent(fileName)}`;
   }
 
   function requestGithubWidgetsBridge(action, payload = {}, timeout = 6000) {
@@ -1263,13 +1265,15 @@
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async function fetchGithubWidgetJsonDirect(widget, fileName) {
+  async function fetchGithubWidgetJsonDirect(widget, fileName, options = {}) {
     const entry = normalizeGithubWidgetEntry(widget);
     if (entry.sourceId !== DEFAULT_GITHUB_WIDGET_SOURCE_ID) {
       throw new Error('Direct fetch supports default widget source only');
     }
 
-    const url = getGithubRawUrl(entry.name, fileName);
+    const url = getGithubRawUrl(entry.name, fileName, {
+      preferRaw: options.bypassCache === true
+    });
     if (!url) throw new Error('Invalid GitHub widget name');
 
     const response = await fetch(url, {
@@ -1295,15 +1299,17 @@
     }
   }
 
-  async function fetchGithubWidgetJson(widget, fileName) {
+  async function fetchGithubWidgetJson(widget, fileName, options = {}) {
     const entry = normalizeGithubWidgetEntry(widget);
+    const payload = {
+      sourceId: entry.sourceId,
+      widgetName: entry.name,
+      fileName
+    };
+    if (options.bypassCache === true) payload.bypassCache = true;
 
     try {
-      return await requestGithubWidgetsBridge('file', {
-        sourceId: entry.sourceId,
-        widgetName: entry.name,
-        fileName
-      });
+      return await requestGithubWidgetsBridge('file', payload);
     } catch (bridgeError) {
       if (entry.sourceId !== DEFAULT_GITHUB_WIDGET_SOURCE_ID) {
         console.error('Taptop Enhancer GitHub widget file error:', bridgeError);
@@ -1311,7 +1317,7 @@
       }
 
       try {
-        return await fetchGithubWidgetJsonDirect(entry, fileName);
+        return await fetchGithubWidgetJsonDirect(entry, fileName, options);
       } catch (directError) {
         console.error('Taptop Enhancer GitHub widget file error:', bridgeError, directError);
         throw directError;
@@ -1323,23 +1329,42 @@
     return !!(data && data.copiedLayout && data.action && data.tagID);
   }
 
+  function getImportedLayerClipboardData(json) {
+    const data = json?.type === LAYER_EXPORT_TYPE ? json.clipboardData : json;
+    return isLayerClipboard(data) ? data : null;
+  }
+
+  function getImportedRootTag(json) {
+    const data = getImportedLayerClipboardData(json);
+    if (!data) return null;
+
+    const root = data?.copiedLayout?.tree?.root;
+    const tags = data?.copiedLayout?.tree?.tags || {};
+    return tags[data?.tagID] || tags[root] || null;
+  }
+
+  function getImportedRootSummary(json, fallbackName = 'layer') {
+    const tag = getImportedRootTag(json);
+    return {
+      name: getLayerNameFromImportedJson(json, fallbackName),
+      type: String(tag?.type || tag?.widgetName || tag?.widgetType || tag?.widgetCode || tag?.code || '')
+    };
+  }
+
+  function isImportedEmbedLayerJson(json) {
+    return isEmbedTag(getImportedRootTag(json));
+  }
+
   function getLayerNameFromImportedJson(json, fallbackName = 'layer') {
     if (json?.type === LAYER_EXPORT_TYPE && json.layerName) return String(json.layerName);
 
-    const data = json?.type === LAYER_EXPORT_TYPE ? json.clipboardData : json;
-    const root = data?.copiedLayout?.tree?.root;
-    const tags = data?.copiedLayout?.tree?.tags || {};
-    const tag = tags[data?.tagID] || tags[root];
+    const tag = getImportedRootTag(json);
 
     return String(tag?.name || tag?.alias || fallbackName || 'layer');
   }
 
   function normalizeImportedLayerJson(json, fallbackName = 'layer') {
-    const data = json?.type === LAYER_EXPORT_TYPE && isLayerClipboard(json.clipboardData)
-      ? json.clipboardData
-      : isLayerClipboard(json)
-        ? json
-        : null;
+    const data = getImportedLayerClipboardData(json);
 
     if (!data) return null;
 
@@ -1357,13 +1382,19 @@
   }
 
   function setClipboardData(api, data) {
+    const raw = JSON.stringify(data);
+
     try {
-      api?.clipboardStore?.setClipboard?.(data);
-      return;
+      localStorage.setItem(CLIPBOARD_KEY, raw);
+      api?.clipboardStore?.updateState?.();
     } catch {}
 
     try {
-      localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(data));
+      api?.clipboardStore?.setClipboard?.(data);
+    } catch {}
+
+    try {
+      localStorage.setItem(CLIPBOARD_KEY, raw);
       api?.clipboardStore?.updateState?.();
     } catch {}
   }
@@ -1737,7 +1768,43 @@
     return root ? buildAppendMarkerPosition(api, root) : null;
   }
 
+  async function resolveGithubWidgetScriptJson(widget, scriptJson) {
+    if (!scriptJson) return null;
+    if (isImportedEmbedLayerJson(scriptJson)) return scriptJson;
+
+    console.warn(
+      'Taptop Enhancer GitHub widget script.json is not an embed layer, refreshing:',
+      widget,
+      getImportedRootSummary(scriptJson, `${widget.name}-script`)
+    );
+
+    try {
+      const refreshed = await fetchGithubWidgetJson(widget, 'script.json', { bypassCache: true });
+      if (isImportedEmbedLayerJson(refreshed)) return refreshed;
+
+      console.warn(
+        'Taptop Enhancer refreshed GitHub widget script.json is still not an embed layer:',
+        widget,
+        getImportedRootSummary(refreshed, `${widget.name}-script`)
+      );
+    } catch (error) {
+      console.error('Taptop Enhancer GitHub widget script refresh error:', error);
+    }
+
+    showGithubWidgetToast(`${widget.name}: script.json не похож на embed`);
+    return null;
+  }
+
   async function importGithubWidgetScript(api, scriptJson, widgetName) {
+    if (!isImportedEmbedLayerJson(scriptJson)) {
+      console.warn(
+        'Taptop Enhancer skipped non-embed widget script:',
+        widgetName,
+        getImportedRootSummary(scriptJson, `${widgetName}-script`)
+      );
+      return null;
+    }
+
     const existing = findExistingGithubWidgetScript(api, scriptJson, widgetName);
     if (existing) return existing;
 
@@ -1820,14 +1887,22 @@
       return null;
     }
 
-    if (scriptJson) {
-      await importGithubWidgetScript(api, scriptJson, widgetName);
-      [120, 360].forEach((delay) => {
-        setTimeout(() => selectCreatedEmbed(api, pastedWidget), delay);
-      });
+    let showAddedToast = true;
+    const resolvedScriptJson = await resolveGithubWidgetScriptJson(widget, scriptJson);
+    if (resolvedScriptJson) {
+      const scriptLayer = await importGithubWidgetScript(api, resolvedScriptJson, widgetName);
+      if (scriptLayer) {
+        [120, 360].forEach((delay) => {
+          setTimeout(() => selectCreatedEmbed(api, pastedWidget), delay);
+        });
+      } else {
+        showAddedToast = false;
+      }
+    } else if (scriptJson) {
+      showAddedToast = false;
     }
 
-    showGithubWidgetToast(`${widgetName} добавлен`);
+    if (showAddedToast) showGithubWidgetToast(`${widgetName} добавлен`);
     return pastedWidget;
   }
 

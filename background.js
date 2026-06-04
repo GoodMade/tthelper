@@ -569,9 +569,13 @@ function getCachedAdditionalWidgetFile(cached, widgetName, fileName) {
   return files[fileName];
 }
 
-function getAdditionalWidgetFileUrl(source, widgetName, fileName) {
+function getAdditionalWidgetFileUrl(source, widgetName, fileName, options = {}) {
   if (source.type === 'local') {
     throw new Error('Local widget file is not in remote source');
+  }
+
+  if (source.type === 'github' && options.preferRaw === true) {
+    return getAdditionalWidgetGithubRawPathUrl(source, `${widgetName}/${fileName}`);
   }
 
   return source.type === 'folder'
@@ -579,8 +583,46 @@ function getAdditionalWidgetFileUrl(source, widgetName, fileName) {
     : getAdditionalWidgetJsdelivrPathUrl(source, `${widgetName}/${fileName}`);
 }
 
-async function fetchAdditionalWidgetFileFromSource(source, widgetName, fileName) {
-  return fetchAdditionalWidgetJson(getAdditionalWidgetFileUrl(source, widgetName, fileName));
+async function fetchAdditionalWidgetFileFromSource(source, widgetName, fileName, options = {}) {
+  return fetchAdditionalWidgetJson(getAdditionalWidgetFileUrl(source, widgetName, fileName, options));
+}
+
+async function writeCachedAdditionalWidgetFile(source, widgetName, fileName, fileJson) {
+  const cache = await readAdditionalWidgetCache();
+  const cached = isAdditionalWidgetCacheValid(source, cache[source.id])
+    ? cache[source.id]
+    : {
+      source: {
+        id: source.id,
+        title: source.title,
+        type: source.type,
+        url: source.url
+      },
+      widgets: [],
+      files: {}
+    };
+  const widgets = Array.isArray(cached.widgets) ? cached.widgets.slice() : [];
+  const hasWidget = widgets.some((widget) => String(widget?.name || widget || '') === widgetName);
+  if (!hasWidget) widgets.push(buildAdditionalWidgetEntry(source, widgetName));
+
+  const files = Object.assign({}, cached.files || {});
+  files[widgetName] = Object.assign({}, files[widgetName] || {}, {
+    [fileName]: fileJson
+  });
+
+  cache[source.id] = Object.assign({}, cached, {
+    source: {
+      id: source.id,
+      title: source.title,
+      type: source.type,
+      url: source.url
+    },
+    widgets,
+    files,
+    syncedAt: Date.now()
+  });
+
+  await writeLocalStorage({ [ADDITIONAL_WIDGET_CACHE_STORAGE_KEY]: cache });
 }
 
 async function loadAdditionalGithubWidgetList(source) {
@@ -762,20 +804,32 @@ async function getAdditionalWidgetSourceById(sourceId) {
 async function loadAdditionalWidgetFile(payload) {
   const widgetName = payload?.widgetName || '';
   const fileName = payload?.fileName || '';
+  const bypassCache = payload?.bypassCache === true;
   if (!isValidAdditionalWidgetName(widgetName)) throw new Error('Invalid widget name');
   if (!ADDITIONAL_WIDGET_VALID_FILE_NAMES.has(fileName)) throw new Error('Invalid widget file');
 
   const source = await getAdditionalWidgetSourceById(payload?.sourceId || ADDITIONAL_WIDGET_DEFAULT_SOURCE.id);
   const cache = await readAdditionalWidgetCache();
   const cachedFile = getCachedAdditionalWidgetFile(cache[source.id], widgetName, fileName);
-  if (cachedFile !== undefined) return cachedFile;
+  if (cachedFile !== undefined && !bypassCache) return cachedFile;
 
-  await syncAdditionalWidgetSource(source);
-  const freshCache = await readAdditionalWidgetCache();
-  const freshFile = getCachedAdditionalWidgetFile(freshCache[source.id], widgetName, fileName);
-  if (freshFile !== undefined) return freshFile;
+  if (source.type === 'local') {
+    if (cachedFile !== undefined) return cachedFile;
+    throw new Error('Local widget file is not loaded');
+  }
 
-  return fetchAdditionalWidgetFileFromSource(source, widgetName, fileName);
+  if (!bypassCache) {
+    await syncAdditionalWidgetSource(source);
+    const freshCache = await readAdditionalWidgetCache();
+    const freshFile = getCachedAdditionalWidgetFile(freshCache[source.id], widgetName, fileName);
+    if (freshFile !== undefined) return freshFile;
+  }
+
+  const fileJson = await fetchAdditionalWidgetFileFromSource(source, widgetName, fileName, {
+    preferRaw: bypassCache
+  });
+  if (bypassCache) await writeCachedAdditionalWidgetFile(source, widgetName, fileName, fileJson);
+  return fileJson;
 }
 
 async function syncAdditionalWidgetSourceById(sourceId) {

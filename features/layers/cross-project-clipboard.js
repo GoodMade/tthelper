@@ -702,6 +702,10 @@
 
     if (this === localStorage && String(key) === CLIPBOARD_KEY && !applyingExternalClipboard) {
       if (isClipboardSaveSuppressed()) {
+        if (isLayerClipboardValue(value)) {
+          lastLocalWriteAt = Date.now();
+          rememberSourceClipboardRaw(value, false);
+        }
         scheduleNativeClipboardSync();
         return result;
       }

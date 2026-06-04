@@ -172,6 +172,12 @@
     return `https://cdn.jsdelivr.net/gh/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}@${encodeURIComponent(info.branch)}/${path}`;
   }
 
+  function getGithubRawPathUrl(source, extraPath) {
+    const info = parseGithubSource(source);
+    const path = encodePath([info.path, extraPath].filter(Boolean).join('/'));
+    return `https://raw.githubusercontent.com/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${encodeURIComponent(info.branch)}/${path}`;
+  }
+
   function normalizeWidgetIndex(data) {
     const items = Array.isArray(data)
       ? data
@@ -401,9 +407,12 @@
       throw new Error('Local widget file is not loaded');
     }
 
+    const bypassCache = payload?.bypassCache === true;
     const url = source.type === 'folder'
       ? joinFolderUrl(source.url, widgetName, fileName)
-      : getJsdelivrPathUrl(source, `${widgetName}/${fileName}`);
+      : bypassCache
+        ? getGithubRawPathUrl(source, `${widgetName}/${fileName}`)
+        : getJsdelivrPathUrl(source, `${widgetName}/${fileName}`);
 
     return fetchJson(url);
   }
