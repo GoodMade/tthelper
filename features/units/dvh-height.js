@@ -3757,6 +3757,14 @@
       .some(Boolean);
   }
 
+  function hasVisibleNativeCustomStyleProperty(properties) {
+    return (properties || []).some((property) => {
+      const row = findCustomStyleRow(property);
+      const [, valueInput] = getCustomStyleRowInputs(row);
+      return isNativeLengthValue(valueInput?.value);
+    });
+  }
+
   function findEmptyCustomStyleRow() {
     return getCustomStyleRows().find((row) => {
       const [nameInput] = getCustomStyleRowInputs(row);
@@ -4238,8 +4246,9 @@
         promoteCustomStylePropertiesViaTaptop([property], row, value, {
           clearRemovalMark: event.isTrusted && (event.type === 'input' || event.type === 'change')
         });
-      } else if (event.type !== 'input') {
-        demoteCustomStylePropertiesViaTaptop([property], row);
+      } else if (event.type !== 'input' && value) {
+        if (isNativeLengthValue(value)) clearCustomUnitPropertiesRemoved([property], row);
+        forgetPropertiesCustomUnit([property], row);
       }
       scheduleCustomStylePanelRefresh(row);
     }, delay);
@@ -4442,6 +4451,12 @@
       const rememberedUnit = getRememberedCustomUnitForControl(control, control.valueInput);
       const inputUnit = String(getUnitInputForControl(control)?.value || '').trim().toLowerCase();
       const datasetUnit = String(control?.picker?.dataset.ttEnhancerSelectedUnit || '').trim().toLowerCase();
+      if (hasVisibleNativeCustomStyleProperty(control.properties)) {
+        forgetControlCustomUnit(control, control.valueInput);
+        clearStaleCustomUnitDisplay(control, control.valueInput, true);
+        return;
+      }
+
       if (
         EXTRA_UNITS.includes(rememberedUnit) &&
         (inputUnit === rememberedUnit || datasetUnit === rememberedUnit)
@@ -4452,9 +4467,6 @@
         return;
       }
 
-      if (hasCustomStylePropertiesViaTaptop(control.properties, control.valueInput)) {
-        demoteCustomStylePropertiesViaTaptop(control.properties, control.valueInput);
-      }
       forgetControlCustomUnit(control, control.valueInput);
     });
   }
