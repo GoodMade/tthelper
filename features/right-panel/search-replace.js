@@ -10,6 +10,11 @@
   const CUSTOM_PRESET_PREFIX = 'custom:';
   const STORAGE_REQUEST_SOURCE = 'tt-enhancer-search-replace';
   const STORAGE_RESPONSE_SOURCE = 'tt-enhancer-search-replace-storage-bridge';
+  const RIGHT_PANEL_TAB_TEXTS = [
+    ['Дизайн', 'Design'],
+    ['Настройки', 'Settings'],
+    ['Анимации', 'Animations']
+  ];
 
   try {
     window[STATE_KEY]?.destroy?.();
@@ -55,6 +60,11 @@
 
   function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function includesLocalizedText(value, texts) {
+    const haystack = normalizeText(value).toLocaleLowerCase();
+    return texts.some((text) => haystack.includes(normalizeText(text).toLocaleLowerCase()));
   }
 
   function isVisible(el) {
@@ -2050,7 +2060,7 @@
       .filter(isVisible)
       .filter((el) => {
         const text = normalizeText(el.textContent);
-        return text.includes('Дизайн') && text.includes('Настройки') && text.includes('Анимации');
+        return RIGHT_PANEL_TAB_TEXTS.every((texts) => includesLocalizedText(text, texts));
       })
       .sort((a, b) => {
         const ar = a.getBoundingClientRect();

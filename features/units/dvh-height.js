@@ -7,21 +7,40 @@
   const USE_NATIVE_STYLE_CONTROLS = true;
   const SIZE_PROPERTY_BY_LABEL = {
     'Шир.': 'width',
+    'W': 'width',
+    'Width': 'width',
     'Выс.': 'height',
+    'H': 'height',
+    'Height': 'height',
     'Мин Ш': 'min-width',
+    'Min W': 'min-width',
+    'Min Width': 'min-width',
     'Мин В': 'min-height',
+    'Min H': 'min-height',
+    'Min Height': 'min-height',
     'Макс Ш': 'max-width',
-    'Макс В': 'max-height'
+    'Max W': 'max-width',
+    'Max Width': 'max-width',
+    'Макс В': 'max-height',
+    'Max H': 'max-height',
+    'Max Height': 'max-height'
   };
   const POSITION_PROPERTY_BY_TITLE = {
     'Сдвинуть вверх': 'top',
+    'Edit position Top': 'top',
     'Сдвинуть вправо': 'right',
+    'Edit position Right': 'right',
     'Сдвинуть вниз': 'bottom',
-    'Сдвинуть влево': 'left'
+    'Edit position Bottom': 'bottom',
+    'Сдвинуть влево': 'left',
+    'Edit position Left': 'left'
   };
-  const POSITION_TITLE_BY_PROPERTY = Object.fromEntries(
-    Object.entries(POSITION_PROPERTY_BY_TITLE).map(([title, property]) => [property, title])
-  );
+  const POSITION_TITLE_BY_PROPERTY = {
+    top: 'Сдвинуть вверх',
+    right: 'Сдвинуть вправо',
+    bottom: 'Сдвинуть вниз',
+    left: 'Сдвинуть влево'
+  };
   const POSITION_PROPERTY_BY_SIDE = {
     top: 'top',
     right: 'right',
@@ -78,6 +97,7 @@
     'animationSelectorCollection',
     'defaultSelectorCollection'
   ];
+  const CUSTOM_STYLE_TITLE_TEXTS = ['Пользовательские свойства', 'Custom Properties'];
   const CUSTOM_UNIT_REMOVAL_TTL_MS = 3000;
 
   if (window[FEATURE_KEY]) return;
@@ -567,9 +587,12 @@
 
   function findSizeUnitControlByKey(label) {
     const items = Array.from(document.querySelectorAll('.tt-styles-size__item'));
-    const item = items.find((item) => (
-      (item.querySelector('.tt-input-text__label')?.textContent || '').trim() === label
-    ));
+    const normalizedLabel = String(label || '').trim();
+    const property = SIZE_PROPERTY_BY_LABEL[normalizedLabel];
+    const item = items.find((item) => {
+      const itemLabel = (item.querySelector('.tt-input-text__label')?.textContent || '').trim();
+      return itemLabel === normalizedLabel || (property && SIZE_PROPERTY_BY_LABEL[itemLabel] === property);
+    });
     return item ? getSizeUnitControl(item) : null;
   }
 
@@ -609,9 +632,11 @@
 
   function findPositionUnitControlByKey(title) {
     const popups = Array.from(document.querySelectorAll('.tt-popup'));
-    const popup = popups.find((popup) => (
-      (popup.querySelector('.tt-popup__title')?.textContent || '').trim() === title
-    ));
+    const property = getPositionPropertyByTitle(title) || POSITION_PROPERTY_BY_SIDE[String(title || '').trim()];
+    const popup = popups.find((popup) => {
+      const popupTitle = (popup.querySelector('.tt-popup__title')?.textContent || '').trim();
+      return popupTitle === title || (property && getPositionPropertyByTitle(popupTitle) === property);
+    });
     const picker = popup?.querySelector('.tt-styles-indent-editor__popup__input .tt-input-picker');
     return picker ? getPositionUnitControl(picker) : null;
   }
@@ -2143,6 +2168,8 @@
       if (control.properties?.some((property) => BORDER_RADIUS_PROPERTIES.includes(property))) {
         return findBorderRadiusUnitControlByKey(control.key, control.properties);
       }
+      const positionProperty = control.properties?.find((property) => POSITION_PROPERTY_BY_SIDE[property]);
+      if (positionProperty) return findPositionUnitControlByKey(control.key) || findPositionUnitControlByKey(positionProperty);
       if (SPACING_PROPERTIES_BY_ICON[control.key]) {
         return control.key.includes('gap')
           ? findGapUnitControlByKey(control.key)
@@ -3692,7 +3719,7 @@
 
   function getCustomStyleBlock() {
     const title = Array.from(document.querySelectorAll('.tt-title-helper')).find((item) => (
-      (item.textContent || '').includes('Пользовательские свойства')
+      CUSTOM_STYLE_TITLE_TEXTS.some((text) => (item.textContent || '').includes(text))
     ));
     let node = title;
     while (node && !node.classList?.contains('tt-styles-block--fields')) node = node.parentElement;

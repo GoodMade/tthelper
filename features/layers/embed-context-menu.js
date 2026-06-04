@@ -8,7 +8,8 @@
   const SCRIPT_DROP_TARGET_ATTR = 'data-tt-enhancer-script-drop-target';
   const SCRIPT_WIDGET_HOVER_OUTLINE_ATTR = 'data-tt-enhancer-script-widget-hover-outline';
   const VISIBILITY_TOGGLES_ATTR = 'data-tt-enhancer-layer-visibility-toggles';
-  const OPEN_EDITOR_TEXT = 'Открыть редактор кода';
+  const OPEN_EDITOR_TEXTS = ['Открыть редактор кода', 'Open code editor'];
+  const SETTINGS_TEXTS = ['Настройки', 'Settings'];
   const EDIT_TEXT = 'Редактировать';
   const SCRIPT_WIDGET_TEXT = 'Script';
   const EMBED_WIDGET_TEXT = 'Embed';
@@ -83,6 +84,15 @@
 
   function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function normalizeSearchText(value) {
+    return normalizeText(value).toLocaleLowerCase();
+  }
+
+  function findLocalizedTextMatch(value, texts) {
+    const haystack = normalizeSearchText(value);
+    return texts.find((text) => haystack.includes(normalizeSearchText(text))) || '';
   }
 
   function hashString(value) {
@@ -687,7 +697,7 @@
     const clickable = Array.from(document.querySelectorAll('button, [role="button"], .tt-button'));
     const directButton = clickable
       .filter(isVisible)
-      .filter((el) => normalizeText(el.textContent).includes(OPEN_EDITOR_TEXT))
+      .filter((el) => findLocalizedTextMatch(el.textContent, OPEN_EDITOR_TEXTS))
       .sort((a, b) => normalizeText(a.textContent).length - normalizeText(b.textContent).length)
       .find(Boolean);
 
@@ -698,7 +708,8 @@
       .filter(isVisible)
       .filter((el) => {
         const text = normalizeText(el.textContent);
-        return text.includes(OPEN_EDITOR_TEXT) && text.length <= OPEN_EDITOR_TEXT.length + 20;
+        const match = findLocalizedTextMatch(text, OPEN_EDITOR_TEXTS);
+        return match && text.length <= match.length + 20;
       })
       .sort((a, b) => normalizeText(a.textContent).length - normalizeText(b.textContent).length)
       .find(Boolean);
@@ -777,7 +788,7 @@
   async function openCodeEditor() {
     let button = findOpenCodeEditorButton();
     if (!button) {
-      const settingsTab = findTextButton('Настройки');
+      const settingsTab = SETTINGS_TEXTS.map(findTextButton).find(Boolean);
       if (settingsTab) dispatchMouseClick(settingsTab);
       button = await waitForOpenCodeEditorButton();
     }

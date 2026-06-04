@@ -6,8 +6,9 @@
   const LAYERS_PANEL_SELECTOR = '.tt-layers';
   const LAYER_CONTROLS_SELECTOR = '[data-tt-enhancer-layer-visibility-toggles]';
   const IMAGE_REPLACE_TEXT = 'Заменить изображение';
+  const IMAGE_REPLACE_TEXTS = [IMAGE_REPLACE_TEXT, 'Replace image'];
   const OPEN_POPUP_TEXT = 'Настройки Kineskope';
-  const SETTINGS_TEXT = 'Настройки';
+  const SETTINGS_TEXTS = ['Настройки', 'Settings'];
   const POPUP_GAP = 6;
   const POPUP_MARGIN = 12;
   const TRIGGER_GAP = 6;
@@ -117,6 +118,18 @@
 
   function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function normalizeSearchText(value) {
+    return normalizeText(value).toLocaleLowerCase();
+  }
+
+  function matchesLocalizedText(value, texts, exact = false) {
+    const haystack = normalizeSearchText(value);
+    return (Array.isArray(texts) ? texts : [texts]).some((text) => {
+      const needle = normalizeSearchText(text);
+      return exact ? haystack === needle : haystack.includes(needle);
+    });
   }
 
   function normalizeDataValue(value) {
@@ -574,12 +587,12 @@
     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
   }
 
-  function findTextButton(text) {
+  function findTextButton(texts) {
     const candidates = Array.from(document.querySelectorAll('button, [role="button"], .tt-button, [class*="tab"], [class*="Tabs"] *'));
     const node = candidates
       .filter(isVisible)
       .sort((a, b) => normalizeText(a.textContent).length - normalizeText(b.textContent).length)
-      .find((el) => normalizeText(el.textContent) === text);
+      .find((el) => matchesLocalizedText(el.textContent, texts, true));
 
     return node?.closest('button, [role="button"], .tt-button, [class*="tab"]') || node || null;
   }
@@ -589,7 +602,7 @@
     const byText = candidates
       .filter(isVisible)
       .sort((a, b) => normalizeText(a.textContent || a.value).length - normalizeText(b.textContent || b.value).length)
-      .find((el) => normalizeText(el.textContent || el.value).includes(IMAGE_REPLACE_TEXT));
+      .find((el) => matchesLocalizedText(el.textContent || el.value, IMAGE_REPLACE_TEXTS));
 
     return byText?.closest('button, [role="button"], .tt-button') || byText || null;
   }
@@ -628,7 +641,7 @@
     setTimeout(() => scheduleSync(), 0);
     await waitForAnimationFrame();
 
-    const settingsTab = findTextButton(SETTINGS_TEXT);
+    const settingsTab = findTextButton(SETTINGS_TEXTS);
     if (settingsTab) dispatchMouseClick(settingsTab);
 
     const replaceButton = await waitForElement(findReplaceImageButton, 5000);

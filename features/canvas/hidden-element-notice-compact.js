@@ -1,6 +1,6 @@
 (function () {
   const STATE_KEY = '__ttEnhancerHiddenElementNoticeCompact';
-  const NOTICE_TEXT = 'Видимость элемента скрыта';
+  const NOTICE_TEXTS = ['Видимость элемента скрыта', 'Element visibility is hidden'];
   const NOTICE_ATTR = 'data-tt-enhancer-hidden-element-notice';
 
   const previous = window[STATE_KEY];
@@ -29,7 +29,7 @@
       .replace(/\s+/g, ' ')
       .trim();
 
-    return ownText === NOTICE_TEXT;
+    return NOTICE_TEXTS.some((text) => ownText === text);
   }
 
   function updateNotice(element) {

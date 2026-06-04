@@ -4,6 +4,7 @@
   const ACE_SELECTOR = '#ace-editor.ace_editor, .ace_editor';
   const STORAGE_KEY = 'tt_enhancer_code_editor_tabs_v1';
   const MAX_TABS = 9;
+  const SAVE_TEXTS = ['Сохранить', 'Save'];
 
   try {
     window.__ttEnhancerCodeTabs?.observer?.disconnect?.();
@@ -11,6 +12,11 @@
 
   function normalize(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function isSaveText(value) {
+    const text = normalize(value).toLocaleLowerCase();
+    return SAVE_TEXTS.some((saveText) => text === normalize(saveText).toLocaleLowerCase());
   }
 
   function hashString(value) {
@@ -290,7 +296,7 @@
     modal.querySelectorAll('button, [role="button"], .tt-button').forEach((button) => {
       if (!(button instanceof HTMLElement) || button.dataset.ttCodeTabsSaveBound === '1') return;
       const text = normalize(button.textContent);
-      if (!/^Сохранить$/i.test(text)) return;
+      if (!isSaveText(text)) return;
       button.dataset.ttCodeTabsSaveBound = '1';
       button.addEventListener('mousedown', () => persistCurrent(modal), true);
       button.addEventListener('click', () => persistCurrent(modal), true);
