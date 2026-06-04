@@ -4,6 +4,7 @@
   const PAGE_SOURCE = 'tt-enhancer-cross-project-clipboard';
   const BRIDGE_SOURCE = 'tt-enhancer-cross-project-clipboard-bridge';
   const UNIQUE_CLASS_RE = /--u-([a-z0-9]+)$/;
+  const PAGE_SESSION_ID = `page_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const IGNORED_CLASS_CONFLICT_NAMES = new Set(['helper--d-none']);
   const FALLBACK_SYSTEM_CLASS_NAMES = new Set([
     'div',
@@ -25,6 +26,7 @@
   const originalSetItem = Storage.prototype.setItem;
   let applyingExternalClipboard = false;
   let sourceClipboardRaw = '';
+  let sourceClipboardIsExternal = false;
   let suppressClipboardSaveDepth = 0;
   let suppressClipboardSaveUntil = 0;
   let lastLocalWriteAt = 0;
@@ -48,9 +50,36 @@
     window.postMessage({ source: PAGE_SOURCE, type, payload }, '*');
   }
 
-  function rememberSourceClipboardRaw(raw) {
+  function getCurrentPageKey() {
+    try {
+      return new URL(location.href).href;
+    } catch {
+      return String(location.href || '');
+    }
+  }
+
+  function getPayloadPageKey(payload) {
+    if (payload?.pageKey) return String(payload.pageKey);
+    if (!payload?.pageUrl) return '';
+
+    try {
+      return new URL(String(payload.pageUrl), location.href).href;
+    } catch {
+      return String(payload.pageUrl || '');
+    }
+  }
+
+  function isSamePagePayload(payload) {
+    if (payload?.sourceId && payload.sourceId === PAGE_SESSION_ID) return true;
+    const payloadPageKey = getPayloadPageKey(payload);
+    return !!payloadPageKey && payloadPageKey === getCurrentPageKey();
+  }
+
+  function rememberSourceClipboardRaw(raw, isExternal = false) {
     const next = String(raw || '');
-    if (isLayerClipboardValue(next)) sourceClipboardRaw = next;
+    if (!isLayerClipboardValue(next)) return;
+    sourceClipboardRaw = next;
+    sourceClipboardIsExternal = Boolean(isExternal);
   }
 
   function isClipboardSaveSuppressed() {
@@ -554,10 +583,12 @@
 
   function saveClipboard(raw) {
     if (!isLayerClipboardValue(raw)) return;
-    rememberSourceClipboardRaw(raw);
+    rememberSourceClipboardRaw(raw, false);
     postToBridge('save', {
       raw: String(raw),
       savedAt: Date.now(),
+      sourceId: PAGE_SESSION_ID,
+      pageKey: getCurrentPageKey(),
       pageUrl: location.href,
       pageOrigin: location.origin
     });
@@ -567,7 +598,8 @@
     if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return;
     if (payload.savedAt && payload.savedAt < lastLocalWriteAt) return;
 
-    rememberSourceClipboardRaw(payload.raw);
+    const isExternalPayload = !isSamePagePayload(payload);
+    rememberSourceClipboardRaw(payload.raw, isExternalPayload);
     try {
       applyingExternalClipboard = true;
       originalSetItem.call(localStorage, CLIPBOARD_KEY, String(payload.raw));
@@ -585,9 +617,11 @@
     if (mode === 'project') return true;
 
     const nextData = createClassCopies(data, conflicts);
+    const nextRaw = JSON.stringify(nextData);
     applyingExternalClipboard = true;
     try {
-      originalSetItem.call(localStorage, CLIPBOARD_KEY, JSON.stringify(nextData));
+      originalSetItem.call(localStorage, CLIPBOARD_KEY, nextRaw);
+      rememberSourceClipboardRaw(nextRaw, true);
       syncNativeClipboardState();
       scheduleNativeClipboardSync();
     } finally {
@@ -600,6 +634,7 @@
   function resolveCurrentClipboardBeforePaste() {
     const raw = restoreSourceClipboardForPaste();
     if (!raw || !isLayerClipboardValue(raw)) return true;
+    if (!sourceClipboardIsExternal) return true;
 
     let data = null;
     try {
