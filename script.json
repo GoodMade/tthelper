@@ -1,0 +1,33 @@
+{
+  "copiedLayout": {
+    "tree": {
+      "root": "tag_script_root",
+      "tags": {
+        "tag_script_root": {
+          "id": "tag_script_root",
+          "name": "Custom Embed Script",
+          "type": "embed",
+          "widgetCode": "embed",
+          "embedCode": "<style>\n.custom-widget-script {\n  background: rgba(255, 255, 255, 0.1);\n  border-radius: 8px;\n  padding: 20px;\n}\n</style>\n\n<div class=\"custom-widget-script\">\n  <h4>Custom Script Widget Installed Successfully</h4>\n  <p>Pasted from catalog!</p>\n</div>\n\n<script>\nconsole.log('Widget Script successfully executed in builder context.');\n</script>",
+          "classNameIds": [],
+          "children": []
+        }
+      },
+      "version": 1
+    },
+    "mainClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "designClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "classNameManager": {
+      "map": {},
+      "list": []
+    }
+  },
+  "action": "copy",
+  "tagID": "tag_script_root"
+}

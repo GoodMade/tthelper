@@ -30,12 +30,21 @@
   let suppressClipboardSaveDepth = 0;
   let suppressClipboardSaveUntil = 0;
   let lastLocalWriteAt = 0;
+  // Timestamp + origin of the value currently materialized in localStorage[CLIPBOARD_KEY].
+  // Used so a freshly arrived (e.g. catalog / cross-project) clipboard is never
+  // clobbered by a stale in-memory remembered value, and vice versa.
+  let sourceClipboardSavedAt = 0;
+  let currentClipboardSavedAt = 0;
+  let currentClipboardIsExternal = false;
   let runtimeRequire = null;
   let activeConflictDialog = null;
   let pastePatchTimer = 0;
   let patchedClipboard = null;
   let originalPasteFromClipboard = null;
+  let originalGetClipboard = null;
   let resolvingPaste = false;
+  const bridgeRefreshTimers = new Set();
+  let lastBridgeLoadRequestedAt = 0;
 
   function isLayerClipboardValue(value) {
     try {
@@ -48,6 +57,32 @@
 
   function postToBridge(type, payload) {
     window.postMessage({ source: PAGE_SOURCE, type, payload }, '*');
+  }
+
+  function requestBridgeClipboardLoad(reason = 'manual') {
+    const now = Date.now();
+    // Avoid message spam while still making focus / paste refreshes responsive.
+    if (now - lastBridgeLoadRequestedAt < 80) return;
+    lastBridgeLoadRequestedAt = now;
+    postToBridge('load', {
+      reason,
+      requesterId: PAGE_SESSION_ID,
+      requestedAt: now,
+      pageKey: getCurrentPageKey(),
+      pageUrl: location.href,
+      pageOrigin: location.origin
+    });
+  }
+
+  function scheduleBridgeClipboardRefresh(reason = 'refresh') {
+    requestBridgeClipboardLoad(reason);
+    [120, 350, 900].forEach((delay) => {
+      const timer = setTimeout(() => {
+        bridgeRefreshTimers.delete(timer);
+        requestBridgeClipboardLoad(`${reason}:${delay}`);
+      }, delay);
+      bridgeRefreshTimers.add(timer);
+    });
   }
 
   function getCurrentPageKey() {
@@ -75,11 +110,12 @@
     return !!payloadPageKey && payloadPageKey === getCurrentPageKey();
   }
 
-  function rememberSourceClipboardRaw(raw, isExternal = false) {
+  function rememberSourceClipboardRaw(raw, isExternal = false, savedAt = Date.now()) {
     const next = String(raw || '');
     if (!isLayerClipboardValue(next)) return;
     sourceClipboardRaw = next;
     sourceClipboardIsExternal = Boolean(isExternal);
+    sourceClipboardSavedAt = Number(savedAt) || Date.now();
   }
 
   function isClipboardSaveSuppressed() {
@@ -100,9 +136,10 @@
   function setClipboardRaw(raw) {
     if (!isLayerClipboardValue(raw)) return false;
 
+    const normalized = normalizeLayerVersionForCurrentProject(raw);
     applyingExternalClipboard = true;
     try {
-      originalSetItem.call(localStorage, CLIPBOARD_KEY, String(raw));
+      originalSetItem.call(localStorage, CLIPBOARD_KEY, String(normalized));
       syncNativeClipboardState();
       scheduleNativeClipboardSync();
       return true;
@@ -115,10 +152,28 @@
 
   function restoreSourceClipboardForPaste() {
     const currentRaw = localStorage.getItem(CLIPBOARD_KEY);
-    if (sourceClipboardRaw && sourceClipboardRaw !== currentRaw && isLayerClipboardValue(sourceClipboardRaw)) {
+    const currentIsLayer = isLayerClipboardValue(currentRaw);
+
+    // Only let the in-memory remembered clipboard win over what is currently in
+    // localStorage when it is a valid layer AND it is at least as fresh as the
+    // current value. This prevents a previously exported/imported JSON buffer
+    // (json-transfer) from overwriting a just-copied catalog/cross-project layer.
+    if (
+      sourceClipboardRaw &&
+      sourceClipboardRaw !== currentRaw &&
+      isLayerClipboardValue(sourceClipboardRaw) &&
+      (!currentIsLayer || sourceClipboardSavedAt >= currentClipboardSavedAt)
+    ) {
       setClipboardRaw(sourceClipboardRaw);
+      currentClipboardSavedAt = sourceClipboardSavedAt;
+      currentClipboardIsExternal = sourceClipboardIsExternal;
       return sourceClipboardRaw;
     }
+
+    // Otherwise keep the current value, but force the native Taptop clipboard
+    // store to re-read it synchronously, so paste never uses a stale in-memory
+    // buffer that is out of sync with localStorage.
+    if (currentIsLayer) syncNativeClipboardState();
     return currentRaw;
   }
 
@@ -160,6 +215,39 @@
       };
     } catch {
       return null;
+    }
+  }
+
+  function getCurrentProjectTreeVersion() {
+    try {
+      const version = getTaptopApi()?.layout?.tree?.version;
+      return /^\d+\.\d+\.\d+$/.test(String(version)) ? String(version) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Taptop's paste handler (C.pasteFromClipboard) rejects a clipboard layer
+  // unless copiedLayout.tree.version EXACTLY equals the destination project's
+  // current tree.version, which is a semver string like "1.0.0". Catalog /
+  // cross-project layers are stamped with a foreign or numeric version (e.g. the
+  // number 1), so the strict !== check fails, pasteFromClipboard returns null,
+  // and nothing is inserted (the previously copied/exported layer appears to
+  // "win"). Re-stamp the incoming layer with the destination project's version
+  // so it passes the gate. If the runtime version cannot be read yet, leave the
+  // value untouched (degrades to previous behaviour).
+  function normalizeLayerVersionForCurrentProject(raw) {
+    const targetVersion = getCurrentProjectTreeVersion();
+    if (!targetVersion) return raw;
+    try {
+      const data = JSON.parse(String(raw));
+      const tree = data?.copiedLayout?.tree;
+      if (!tree) return raw;
+      if (String(tree.version) === targetVersion) return raw;
+      tree.version = targetVersion;
+      return JSON.stringify(data);
+    } catch {
+      return raw;
     }
   }
 
@@ -306,11 +394,7 @@
     [
       api?.layout?.classNameManager,
       api?.layout?.mainClassNameCollection,
-      api?.layout?.designClassNameCollection,
-      api?.layout?.mainSelectorCollection,
-      api?.layout?.designSelectorCollection,
-      api?.layout?.cmSelectorCollection,
-      api?.layout?.animationSelectorCollection
+      api?.layout?.designClassNameCollection
     ].forEach((collection) => {
       collectUserClassValues(collection).forEach((value) => values.add(value));
     });
@@ -583,10 +667,13 @@
 
   function saveClipboard(raw) {
     if (!isLayerClipboardValue(raw)) return;
-    rememberSourceClipboardRaw(raw, false);
+    const savedAt = Date.now();
+    rememberSourceClipboardRaw(raw, false, savedAt);
+    currentClipboardSavedAt = savedAt;
+    currentClipboardIsExternal = false;
     postToBridge('save', {
       raw: String(raw),
-      savedAt: Date.now(),
+      savedAt,
       sourceId: PAGE_SESSION_ID,
       pageKey: getCurrentPageKey(),
       pageUrl: location.href,
@@ -596,13 +683,35 @@
 
   function applyExternalClipboard(payload) {
     if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return;
-    if (payload.savedAt && payload.savedAt < lastLocalWriteAt) return;
 
+    const raw = normalizeLayerVersionForCurrentProject(payload.raw);
+    const payloadSavedAt = Number(payload.savedAt) || Date.now();
     const isExternalPayload = !isSamePagePayload(payload);
-    rememberSourceClipboardRaw(payload.raw, isExternalPayload);
+    const currentRaw = localStorage.getItem(CLIPBOARD_KEY);
+
+    // Already applied: just refresh bookkeeping. We intentionally do NOT compare
+    // against lastLocalWriteAt here — that cross-tab/page wall-clock guard used to
+    // silently drop valid catalog payloads.
+    if (raw === currentRaw) {
+      rememberSourceClipboardRaw(raw, isExternalPayload, payloadSavedAt);
+      currentClipboardSavedAt = payloadSavedAt;
+      currentClipboardIsExternal = isExternalPayload;
+      return;
+    }
+
+    // Skip only when the incoming value is strictly older than the valid layer
+    // we already hold.
+    if (isLayerClipboardValue(currentRaw) && payloadSavedAt < currentClipboardSavedAt) return;
+
+    rememberSourceClipboardRaw(raw, isExternalPayload, payloadSavedAt);
+    currentClipboardSavedAt = payloadSavedAt;
+    currentClipboardIsExternal = isExternalPayload;
     try {
       applyingExternalClipboard = true;
-      originalSetItem.call(localStorage, CLIPBOARD_KEY, String(payload.raw));
+      originalSetItem.call(localStorage, CLIPBOARD_KEY, String(raw));
+      // Sync the native Taptop clipboard store immediately (and again on a few
+      // delays for safety) so a paste right after switching tabs uses the new layer.
+      syncNativeClipboardState();
       scheduleNativeClipboardSync();
     } catch (error) {
       console.warn('Taptop Enhancer cross-project clipboard apply failed:', error);
@@ -617,11 +726,14 @@
     if (mode === 'project') return true;
 
     const nextData = createClassCopies(data, conflicts);
-    const nextRaw = JSON.stringify(nextData);
+    const nextRaw = normalizeLayerVersionForCurrentProject(JSON.stringify(nextData));
     applyingExternalClipboard = true;
     try {
+      const conflictSavedAt = Date.now();
       originalSetItem.call(localStorage, CLIPBOARD_KEY, nextRaw);
-      rememberSourceClipboardRaw(nextRaw, true);
+      rememberSourceClipboardRaw(nextRaw, true, conflictSavedAt);
+      currentClipboardSavedAt = conflictSavedAt;
+      currentClipboardIsExternal = true;
       syncNativeClipboardState();
       scheduleNativeClipboardSync();
     } finally {
@@ -661,6 +773,19 @@
 
     patchedClipboard = clipboard;
     originalPasteFromClipboard = clipboard.pasteFromClipboard;
+    originalGetClipboard = typeof clipboard.getClipboard === 'function' ? clipboard.getClipboard : null;
+
+    if (originalGetClipboard && !originalGetClipboard.__ttEnhancerCrossProjectPatchedGet) {
+      const patchedGetClipboard = function (...args) {
+        // Taptop's Cmd/Ctrl+V flow reads getClipboard() first to decide action/tagID.
+        // If we only patch pasteFromClipboard(), the hotkey path can still make its
+        // decision from the old local buffer. Refresh before every read.
+        prepareClipboardBeforeNativePaste();
+        return originalGetClipboard.apply(this, args);
+      };
+      patchedGetClipboard.__ttEnhancerCrossProjectPatchedGet = true;
+      clipboard.getClipboard = patchedGetClipboard;
+    }
 
     const patchedPasteFromClipboard = function (...args) {
       if (resolvingPaste) return originalPasteFromClipboard.apply(this, args);
@@ -704,7 +829,9 @@
       if (isClipboardSaveSuppressed()) {
         if (isLayerClipboardValue(value)) {
           lastLocalWriteAt = Date.now();
-          rememberSourceClipboardRaw(value, false);
+          currentClipboardSavedAt = lastLocalWriteAt;
+          currentClipboardIsExternal = false;
+          rememberSourceClipboardRaw(value, false, lastLocalWriteAt);
         }
         scheduleNativeClipboardSync();
         return result;
@@ -729,18 +856,87 @@
     }
   }
 
+  function isPasteHotkey(event) {
+    const key = String(event.key || '').toLowerCase();
+    const code = String(event.code || '').toLowerCase();
+    const isV = key === 'v' || key === 'м' || code === 'keyv' || event.keyCode === 86;
+    return isV && (event.metaKey || event.ctrlKey) && !event.altKey;
+  }
+
+  function prepareClipboardBeforeNativePaste() {
+    // This runs synchronously before Taptop's own hotkey handler. If the bridge
+    // has already delivered the catalog payload (usually on focus), make it the
+    // active clipboard immediately so Taptop does not read an older local buffer.
+    restoreSourceClipboardForPaste();
+    syncNativeClipboardState();
+  }
+
+  function onKeyDownCapture(event) {
+    if (!isPasteHotkey(event)) return;
+    requestBridgeClipboardLoad('paste-hotkey');
+    prepareClipboardBeforeNativePaste();
+  }
+
+  function onFocusRefresh() {
+    scheduleBridgeClipboardRefresh('focus');
+  }
+
+  function onVisibilityRefresh() {
+    if (document.visibilityState === 'visible') scheduleBridgeClipboardRefresh('visible');
+  }
+
+  function onPaste(event) {
+    try {
+      const text = event.clipboardData?.getData('text/plain');
+      if (text && isLayerClipboardValue(text)) {
+        const current = localStorage.getItem(CLIPBOARD_KEY);
+        if (text === current) return;
+
+        const savedAt = Date.now();
+        applyingExternalClipboard = true;
+        try {
+          const normalized = normalizeLayerVersionForCurrentProject(text);
+          originalSetItem.call(localStorage, CLIPBOARD_KEY, String(normalized));
+          rememberSourceClipboardRaw(normalized, true, savedAt); // Mark as external for conflict check
+          currentClipboardSavedAt = savedAt;
+          currentClipboardIsExternal = true;
+          syncNativeClipboardState();
+        } finally {
+          applyingExternalClipboard = false;
+        }
+      }
+    } catch (err) {
+      console.warn('Taptop Enhancer paste capture error:', err);
+    }
+  }
+
   Storage.prototype.setItem = patchedSetItem;
   window.addEventListener('message', onMessage);
-  postToBridge('load');
+  window.addEventListener('paste', onPaste, true);
+  window.addEventListener('keydown', onKeyDownCapture, true);
+  window.addEventListener('focus', onFocusRefresh, true);
+  window.addEventListener('pageshow', onFocusRefresh, true);
+  document.addEventListener('visibilitychange', onVisibilityRefresh, true);
+  scheduleBridgeClipboardRefresh('init');
   installPastePatch();
   pastePatchTimer = window.setInterval(installPastePatch, 300);
 
   window[STATE_KEY] = {
     destroy() {
       window.removeEventListener('message', onMessage);
+      window.removeEventListener('paste', onPaste, true);
+      window.removeEventListener('keydown', onKeyDownCapture, true);
+      window.removeEventListener('focus', onFocusRefresh, true);
+      window.removeEventListener('pageshow', onFocusRefresh, true);
+      document.removeEventListener('visibilitychange', onVisibilityRefresh, true);
+      bridgeRefreshTimers.forEach((timer) => clearTimeout(timer));
+      bridgeRefreshTimers.clear();
       clearInterval(pastePatchTimer);
       activeConflictDialog?.remove?.();
       document.querySelectorAll('style[data-tt-layer-class-conflict]').forEach((node) => node.remove());
+      if (patchedClipboard?.getClipboard?.__ttEnhancerCrossProjectPatchedGet && originalGetClipboard) {
+        patchedClipboard.getClipboard = originalGetClipboard;
+      }
       if (patchedClipboard?.pasteFromClipboard?.__ttEnhancerCrossProjectPatched && originalPasteFromClipboard) {
         patchedClipboard.pasteFromClipboard = originalPasteFromClipboard;
       }

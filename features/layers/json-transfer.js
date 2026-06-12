@@ -279,11 +279,7 @@
     [
       api?.layout?.classNameManager,
       api?.layout?.mainClassNameCollection,
-      api?.layout?.designClassNameCollection,
-      api?.layout?.mainSelectorCollection,
-      api?.layout?.designSelectorCollection,
-      api?.layout?.cmSelectorCollection,
-      api?.layout?.animationSelectorCollection
+      api?.layout?.designClassNameCollection
     ].forEach((collection) => {
       collectUserClassValues(collection).forEach((value) => values.add(value));
     });

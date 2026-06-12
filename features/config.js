@@ -158,6 +158,19 @@ const featuresConfig = {
   features: {
     name: "Фичи",
     options: {
+      aiGeminiChat: {
+        label: "AI чат",
+        tooltip: "Чат для правки текста и image-слоёв через Gemini, OpenRouter или Puter.js.",
+        storageKey: "features_aiGeminiChat",
+        dnrRulesets: ["gemini_frame_rules"],
+        css: ["features/ai-panel/gemini-panel.css"],
+        js: ["features/ai-panel/gemini-panel.js"],
+        isolated_js: ["features/ai-panel/gemini-panel-bridge.js"],
+        deinit: "features/ai-panel/gemini-panel.deinit.js",
+        isolated_deinit: "features/ai-panel/gemini-panel-bridge.deinit.js",
+        defaultValue: false,
+        reloadRequired: false
+      },
       crossProjectClipboard: {
         label: "Копирование слоёв между проектами",
         disabledOnFreePlan: true,
@@ -190,12 +203,28 @@ const featuresConfig = {
         isolated_deinit: "features/right-panel/search-replace-storage-bridge.deinit.js",
         defaultValue: true,
         reloadRequired: false
+      },
+      reuseDeletedClassNames: {
+        label: "Классы проекта и слоя",
+        tooltip: "Добавляет пункты «Классы проекта», «Классы слоя» и «Удалить классы» для очистки классов слоя и вложенных слоёв без резерва имён.",
+        storageKey: "fixes_reuseDeletedClassNames",
+        js: ["features/fixes/reuse-deleted-class-names.js"],
+        deinit: "features/fixes/reuse-deleted-class-names.deinit.js",
+        defaultValue: true,
+        reloadRequired: false
       }
     }
   },
   fixes: {
     name: "Патчи",
     options: {
+      safeMode: {
+        label: "Безопасный режим расширения",
+        tooltip: "Не внедряет фичи в страницу конструктора. Используйте, если TapTop зависает при загрузке.",
+        storageKey: "ttEnhancer_safeModeManual",
+        defaultValue: false,
+        reloadRequired: false
+      },
       disableHiddenLayerAutoclose: {
         label: "Отключить автозакрытие скрытых слоев",
         tooltip: "Оставляет слой раскрытым в левой панели, если он скрыт через display:none или настройку видимости.",
@@ -214,6 +243,24 @@ const featuresConfig = {
         tooltip: "Подсказки можно увидеть если при наведении зажать клавишу CTRL.",
         css: ["features/right-panel/disable-tooltips.css"],
         js: ["features/right-panel/disable-tooltips.js"],
+        reloadRequired: false
+      },
+      colorPaletteTooltips: {
+        label: "Подсказки в палитре цветов",
+        tooltip: "Показывает имя сохранённого цвета при наведении и добавляет подробный список сохранённых цветов в палитре.",
+        css: ["features/right-panel/color-palette-tooltips.css"],
+        js: ["features/right-panel/color-palette-tooltips.js"],
+        deinit: "features/right-panel/color-palette-tooltips.deinit.js",
+        defaultValue: false,
+        reloadRequired: false
+      },
+      freeHorizontalMove: {
+        label: "Свободное горизонтальное перемещение панели",
+        tooltip: "Позволяет тянуть правую панель конструктора по горизонтали за верхнюю область. Двойной клик по зоне перетаскивания возвращает панель на место.",
+        css: ["features/right-panel/free-horizontal-move.css"],
+        js: ["features/right-panel/free-horizontal-move.js"],
+        deinit: "features/right-panel/free-horizontal-move.deinit.js",
+        defaultValue: false,
         reloadRequired: false
       },
       dvhHeight: {
@@ -243,14 +290,40 @@ const featuresConfig = {
   miniBrowser: {
     name: "Мини браузер",
     options: {
+      browserPanelHost: {
+        hidden: true,
+        storageKey: "miniBrowser_browserPanelHost",
+        enabledWhenAnyOf: [
+          "miniBrowser_enabled",
+          "miniBrowser_sidePanelBrowser",
+          "miniBrowser_openCurrentSiteTabButton"
+        ],
+        css: ["features/mini-browser/browser-panel.css"],
+        isolated_js: ["features/mini-browser/browser-panel.js"],
+        isolated_deinit: "features/mini-browser/browser-panel.deinit.js",
+        defaultValue: true,
+        reloadRequired: false
+      },
+      enabled: {
+        label: "Мини браузер",
+        tooltip: "Добавляет кнопку мини браузера в верхнюю панель редактора.",
+        storageKey: "miniBrowser_enabled",
+        dnrRulesets: ["gemini_frame_rules"],
+        defaultValue: false,
+        reloadRequired: false
+      },
+      sidePanelBrowser: {
+        label: "Браузер правой панели",
+        tooltip: "Добавляет кнопку браузера в боковой панели Chrome.",
+        storageKey: "miniBrowser_sidePanelBrowser",
+        dnrRulesets: ["gemini_frame_rules"],
+        defaultValue: false,
+        reloadRequired: false
+      },
       pinnedTabs: {
         type: "browserTabs",
         label: "Закрепленные ссылки",
         storageKey: "miniBrowser_pinnedTabs",
-        css: ["features/mini-browser/browser-panel.css"],
-        isolated_js: ["features/mini-browser/browser-panel.js"],
-        isolated_deinit: "features/mini-browser/browser-panel.deinit.js",
-        dnrRulesets: ["gemini_frame_rules"],
         defaultValue: [
           { id: "project-site", title: "Сайт проекта", url: "", active: true, dynamicUrl: "currentSite" },
           { id: "gemini", title: "Gemini", url: "https://gemini.google.com", active: true },

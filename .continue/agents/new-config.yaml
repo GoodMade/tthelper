@@ -1,0 +1,13 @@
+{
+  "models": [
+    {
+      "title": "Notion AI",
+      "provider": "openai",
+      "model": "claude-opus4.6",
+      "apiBase": "http://localhost:8000/v1",
+      "apiKey": "any-string"
+    }
+  ],
+  "slashCommands": [],
+  "customCommands": []
+}

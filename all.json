@@ -1,0 +1,57 @@
+{
+  "copiedLayout": {
+    "tree": {
+      "root": "tag_all_root",
+      "tags": {
+        "tag_all_root": {
+          "id": "tag_all_root",
+          "name": "All Widget Component",
+          "type": "div",
+          "classNameIds": [],
+          "children": ["tag_layers_subcontainer", "tag_script_subcontainer"]
+        },
+        "tag_layers_subcontainer": {
+          "id": "tag_layers_subcontainer",
+          "name": "Layers Wrapper",
+          "type": "div",
+          "classNameIds": [],
+          "children": ["tag_inner_text"],
+          "parent": "tag_all_root"
+        },
+        "tag_inner_text": {
+          "id": "tag_inner_text",
+          "name": "Inner Text Element",
+          "type": "text",
+          "classNameIds": [],
+          "children": [],
+          "parent": "tag_layers_subcontainer"
+        },
+        "tag_script_subcontainer": {
+          "id": "tag_script_subcontainer",
+          "name": "Script Embed Widget",
+          "type": "embed",
+          "widgetCode": "embed",
+          "embedCode": "<style>\n.custom-widget {\n  color: #00ffcc;\n}\n</style>\n\n<div class=\"custom-widget\">\n  Hello from Widget Catalog!\n</div>\n\n<script>\nconsole.log('Widget Script Loaded!');\n</script>",
+          "classNameIds": [],
+          "children": [],
+          "parent": "tag_all_root"
+        }
+      },
+      "version": 1
+    },
+    "mainClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "designClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "classNameManager": {
+      "map": {},
+      "list": []
+    }
+  },
+  "action": "copy",
+  "tagID": "tag_all_root"
+}

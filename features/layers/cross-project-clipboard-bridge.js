@@ -12,16 +12,85 @@
     window.postMessage({ source: BRIDGE_SOURCE, type, payload }, '*');
   }
 
-  function loadClipboard() {
-    chrome.storage.local.get(STORAGE_KEY, (stored) => {
-      if (chrome.runtime.lastError) return;
-      postToPage('loaded', stored[STORAGE_KEY] || null);
-    });
+  function safeLastError() {
+    try {
+      return chrome?.runtime?.lastError || null;
+    } catch {
+      return null;
+    }
   }
 
-  function saveClipboard(payload) {
-    if (!payload?.raw) return;
-    chrome.storage.local.set({ [STORAGE_KEY]: payload });
+  function canUseChromeStorage(area = 'local') {
+    try {
+      return !!chrome?.runtime?.id && !!chrome?.storage?.[area];
+    } catch {
+      return false;
+    }
+  }
+
+  function loadClipboard() {
+    if (!canUseChromeStorage('local')) return;
+    try {
+      chrome.storage.local.get(STORAGE_KEY, (stored) => {
+        if (safeLastError()) return;
+        postToPage('loaded', stored?.[STORAGE_KEY] || null);
+      });
+    } catch {}
+  }
+
+  function saveClipboard(payload, requestId) {
+    if (!payload?.raw) {
+      postToPage('error', { requestId, error: 'empty-payload' });
+      return;
+    }
+
+    const savedPayload = {
+      ...payload,
+      savedAt: Number(payload.savedAt) || Date.now(),
+      bridgeSavedAt: Date.now()
+    };
+
+    const confirmSaved = () => postToPage('saved', { requestId, payload: savedPayload });
+    const reportError = (error) => postToPage('error', {
+      requestId,
+      error: error?.message || String(error || 'save-failed')
+    });
+
+    if (canUseChromeStorage('local')) {
+      try {
+        chrome.storage.local.set({ [STORAGE_KEY]: savedPayload }, () => {
+          const lastError = safeLastError();
+          if (lastError) reportError(lastError);
+          else confirmSaved();
+        });
+        return;
+      } catch (error) {
+        reportError(error);
+        return;
+      }
+    }
+
+    // Fallback for contexts where chrome.storage is not exposed to the isolated
+    // script but chrome.runtime messaging is still available. Background stores
+    // the same payload under STORAGE_KEY.
+    try {
+      if (chrome?.runtime?.id && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({
+          action: 'ttCrossProjectClipboardSave',
+          payload: savedPayload
+        }, (response) => {
+          const lastError = safeLastError();
+          if (lastError || !response?.ok) reportError(lastError || response?.error || 'background-save-failed');
+          else confirmSaved();
+        });
+        return;
+      }
+    } catch (error) {
+      reportError(error);
+      return;
+    }
+
+    reportError('chrome-storage-unavailable');
   }
 
   function onMessage(event) {
@@ -30,7 +99,7 @@
     const data = event.data;
     if (!data || data.source !== PAGE_SOURCE) return;
 
-    if (data.type === 'save') saveClipboard(data.payload);
+    if (data.type === 'save') saveClipboard(data.payload, data.requestId || data.payload?.requestId);
     if (data.type === 'load') loadClipboard();
   }
 
@@ -40,13 +109,18 @@
   }
 
   window.addEventListener('message', onMessage);
-  chrome.storage.onChanged.addListener(onStorageChanged);
+  try {
+    chrome?.storage?.onChanged?.addListener?.(onStorageChanged);
+  } catch {}
+  postToPage('ready', { storageAvailable: canUseChromeStorage('local') });
   loadClipboard();
 
   window[STATE_KEY] = {
     destroy() {
       window.removeEventListener('message', onMessage);
-      chrome.storage.onChanged.removeListener(onStorageChanged);
+      try {
+        chrome?.storage?.onChanged?.removeListener?.(onStorageChanged);
+      } catch {}
       if (window[STATE_KEY] === this) delete window[STATE_KEY];
     }
   };

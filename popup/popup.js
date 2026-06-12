@@ -1803,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tabs = tabs.filter((tab) => {
-      return !tab.deleted || !(option.defaultValue || []).some((defaultTab) => isSameDefaultBrowserTab(tab, defaultTab));
+      return !tab.deleted || (option.defaultValue || []).some((defaultTab) => isSameDefaultBrowserTab(tab, defaultTab));
     });
 
     (option.defaultValue || []).forEach((defaultTab) => {
@@ -2035,6 +2035,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const optionId in category.options) {
         const option = category.options[optionId];
+        if (option.hidden) continue;
+
         const fullId = `${categoryId}_${optionId}`;
         const storageKey = option.storageKey || fullId;
 

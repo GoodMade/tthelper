@@ -21,6 +21,26 @@
     }, '*');
   }
 
+  function safeLastError() {
+    try {
+      return chrome?.runtime?.lastError || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function canUseSyncStorage() {
+    try {
+      return !!chrome?.runtime?.id && !!chrome?.storage?.sync;
+    } catch {
+      return false;
+    }
+  }
+
+  function isContextInvalidated(error) {
+    return /extension context invalidated/i.test(String(error?.message || error || ''));
+  }
+
   function onMessage(event) {
     if (event.source !== window) return;
     const message = event.data;
@@ -33,18 +53,36 @@
     }
 
     if (message.action === 'get') {
-      chrome.storage.sync.get({ [key]: message.payload?.defaultValue ?? null }, (items) => {
-        const error = chrome.runtime.lastError;
-        respond(message.id, !error, items?.[key], error?.message || '');
-      });
+      if (!canUseSyncStorage()) {
+        return;
+      }
+      try {
+        chrome.storage.sync.get({ [key]: message.payload?.defaultValue ?? null }, (items) => {
+          const error = safeLastError();
+          if (isContextInvalidated(error)) return;
+          respond(message.id, !error, items?.[key], error?.message || '');
+        });
+      } catch (error) {
+        if (isContextInvalidated(error)) return;
+        respond(message.id, false, null, error?.message || String(error));
+      }
       return;
     }
 
     if (message.action === 'set') {
-      chrome.storage.sync.set({ [key]: message.payload?.value }, () => {
-        const error = chrome.runtime.lastError;
-        respond(message.id, !error, null, error?.message || '');
-      });
+      if (!canUseSyncStorage()) {
+        return;
+      }
+      try {
+        chrome.storage.sync.set({ [key]: message.payload?.value }, () => {
+          const error = safeLastError();
+          if (isContextInvalidated(error)) return;
+          respond(message.id, !error, null, error?.message || '');
+        });
+      } catch (error) {
+        if (isContextInvalidated(error)) return;
+        respond(message.id, false, null, error?.message || String(error));
+      }
       return;
     }
 

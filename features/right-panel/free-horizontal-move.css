@@ -1,0 +1,91 @@
+.tt-enhancer-right-panel-rails-target {
+  --tt-enhancer-right-panel-rails-offset: 0px;
+}
+
+.tt-enhancer-right-panel-rails-target.tt-enhancer-right-panel-rails-floating {
+  z-index: 70 !important;
+  transform: translate3d(var(--tt-enhancer-right-panel-rails-offset), 0, 0) !important;
+  will-change: transform;
+}
+
+.tt-enhancer-right-panel-rails-target.tt-enhancer-right-panel-rails-pinned-left {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 70 !important;
+  margin: 0 !important;
+  transform: none !important;
+  will-change: auto;
+}
+
+.tt-enhancer-right-panel-rails-target.tt-enhancer-right-panel-rails-detached {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 70 !important;
+  margin: 0 !important;
+  transform: none !important;
+  will-change: auto;
+}
+
+.tt-enhancer-right-panel-rails-target.tt-enhancer-right-panel-rails-dragging {
+  transition: none !important;
+}
+
+.tt-classes__dropdown {
+  z-index: 10030 !important;
+}
+
+.tt-enhancer-right-panel-rails-handle {
+  position: absolute;
+  z-index: 2147483000;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+.tt-enhancer-right-panel-rails-target.tt-enhancer-right-panel-rails-dragging .tt-enhancer-right-panel-rails-handle {
+  cursor: grabbing;
+}
+
+.tt-enhancer-right-panel-rails-handle--top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+}
+
+.tt-enhancer-right-panel-rails-target .tt-design-mode-right-panel__tabs .tt-tabs__list {
+  margin-top: 5px;
+}
+
+body.tt-enhancer-right-panel-rails-is-dragging,
+body.tt-enhancer-right-panel-rails-is-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+.tt-enhancer-right-panel-rails-expand-button {
+  position: fixed;
+  z-index: 10020;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #9b9b9b;
+  box-shadow: none;
+  cursor: pointer;
+  font: 700 46px/1 Inter, Arial, sans-serif;
+  user-select: none;
+  transition: color 120ms ease;
+}
+
+.tt-enhancer-right-panel-rails-expand-button:hover,
+.tt-enhancer-right-panel-rails-expand-button:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  color: #737373;
+  outline: none;
+}

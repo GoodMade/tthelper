@@ -225,6 +225,30 @@
     }, '*');
   }
 
+  function safeLastError() {
+    try {
+      return chrome?.runtime?.lastError || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function isExtensionContextError(error) {
+    return /extension context invalidated/i.test(String(error?.message || error || ''));
+  }
+
+  function canUseChromeApi(path) {
+    try {
+      if (!chrome?.runtime?.id) return false;
+      if (path === 'syncStorage') return !!chrome?.storage?.sync;
+      if (path === 'localStorage') return !!chrome?.storage?.local;
+      if (path === 'runtimeMessage') return typeof chrome?.runtime?.sendMessage === 'function';
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function fetchJson(url, options = {}) {
     const response = await fetch(url, Object.assign({
       cache: 'no-cache',
@@ -238,13 +262,17 @@
 
   function requestBackground(action, payload = {}) {
     return new Promise((resolve, reject) => {
+      if (!canUseChromeApi('runtimeMessage')) {
+        reject(new Error('Extension context invalidated'));
+        return;
+      }
       try {
         chrome.runtime.sendMessage({
           action: 'additionalWidgetsRequest',
           widgetAction: action,
           payload
         }, (response) => {
-          const error = chrome.runtime.lastError;
+          const error = safeLastError();
           if (error) {
             reject(new Error(error.message || 'Background request failed'));
             return;
@@ -265,6 +293,10 @@
 
   function readCustomSources() {
     return new Promise((resolve) => {
+      if (!canUseChromeApi('syncStorage')) {
+        resolve([]);
+        return;
+      }
       try {
         chrome.storage.sync.get({ [SOURCES_STORAGE_KEY]: [] }, (settings) => {
           const sources = Array.isArray(settings?.[SOURCES_STORAGE_KEY])
@@ -280,6 +312,10 @@
 
   function readDisabledWidgets() {
     return new Promise((resolve) => {
+      if (!canUseChromeApi('syncStorage')) {
+        resolve({});
+        return;
+      }
       try {
         chrome.storage.sync.get({ [DISABLED_STORAGE_KEY]: {} }, (settings) => {
           resolve(normalizeDisabledMap(settings?.[DISABLED_STORAGE_KEY]));
@@ -292,6 +328,10 @@
 
   function readWidgetCache() {
     return new Promise((resolve) => {
+      if (!canUseChromeApi('localStorage')) {
+        resolve({});
+        return;
+      }
       try {
         chrome.storage.local.get({ [CACHE_STORAGE_KEY]: {} }, (items) => {
           resolve(items?.[CACHE_STORAGE_KEY] || {});
@@ -320,6 +360,17 @@
 
   async function loadGithubWidgetList(source) {
     try {
+      const items = await fetchJson(getGithubContentsUrl(source), {
+        headers: { Accept: 'application/vnd.github+json' }
+      });
+      if (Array.isArray(items)) {
+        return items
+          .filter((item) => item?.type === 'dir' && isValidWidgetName(item.name))
+          .map((item) => buildWidgetEntry(source, item.name));
+      }
+    } catch {}
+
+    try {
       const names = parseJsdelivrFlatList(await fetchJson(getJsdelivrPackageUrl(source)), source);
       if (names.length) return names.map((name) => buildWidgetEntry(source, name));
     } catch {}
@@ -329,15 +380,7 @@
       if (names.length) return names.map((name) => buildWidgetEntry(source, name));
     } catch {}
 
-    const items = await fetchJson(getGithubContentsUrl(source), {
-      headers: { Accept: 'application/vnd.github+json' }
-    });
-
-    if (!Array.isArray(items)) return [];
-
-    return items
-      .filter((item) => item?.type === 'dir' && isValidWidgetName(item.name))
-      .map((item) => buildWidgetEntry(source, item.name));
+    return [];
   }
 
   async function loadFolderWidgetList(source) {
@@ -425,7 +468,9 @@
         try {
           postResponse(id, true, await requestBackground('list'));
         } catch (backgroundError) {
-          console.warn('Taptop Enhancer widgets background list fallback:', backgroundError);
+          if (!isExtensionContextError(backgroundError)) {
+            console.warn('Taptop Enhancer widgets background list fallback:', backgroundError);
+          }
           postResponse(id, true, await loadWidgetList());
         }
         return;
@@ -435,7 +480,9 @@
         try {
           postResponse(id, true, await requestBackground('file', data.payload || {}));
         } catch (backgroundError) {
-          console.warn('Taptop Enhancer widgets background file fallback:', backgroundError);
+          if (!isExtensionContextError(backgroundError)) {
+            console.warn('Taptop Enhancer widgets background file fallback:', backgroundError);
+          }
           postResponse(id, true, await loadWidgetFile(data.payload || {}));
         }
         return;

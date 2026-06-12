@@ -1,0 +1,63 @@
+{
+  "copiedLayout": {
+    "tree": {
+      "root": "tag_layers_root",
+      "tags": {
+        "tag_layers_root": {
+          "id": "tag_layers_root",
+          "name": "Feature Layers Grid",
+          "type": "div",
+          "classNameIds": [],
+          "children": ["tag_feature_1", "tag_feature_2"]
+        },
+        "tag_feature_1": {
+          "id": "tag_feature_1",
+          "name": "Feature Card 1",
+          "type": "div",
+          "classNameIds": [],
+          "children": ["tag_title_1"],
+          "parent": "tag_layers_root"
+        },
+        "tag_title_1": {
+          "id": "tag_title_1",
+          "name": "Card 1 Title",
+          "type": "text",
+          "classNameIds": [],
+          "children": [],
+          "parent": "tag_feature_1"
+        },
+        "tag_feature_2": {
+          "id": "tag_feature_2",
+          "name": "Feature Card 2",
+          "type": "div",
+          "classNameIds": [],
+          "children": ["tag_title_2"],
+          "parent": "tag_layers_root"
+        },
+        "tag_title_2": {
+          "id": "tag_title_2",
+          "name": "Card 2 Title",
+          "type": "text",
+          "classNameIds": [],
+          "children": [],
+          "parent": "tag_feature_2"
+        }
+      },
+      "version": 1
+    },
+    "mainClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "designClassNameCollection": {
+      "map": {},
+      "list": []
+    },
+    "classNameManager": {
+      "map": {},
+      "list": []
+    }
+  },
+  "action": "copy",
+  "tagID": "tag_layers_root"
+}

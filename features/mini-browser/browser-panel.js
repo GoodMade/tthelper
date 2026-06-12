@@ -7,6 +7,8 @@
   const CODE_EDITOR_STACK_ACTIVE_CLASS = 'tt-enhancer--stack-active';
   const CODE_EDITOR_STACK_BACKGROUND_CLASS = 'tt-enhancer--stack-background';
   const STACK_ACTIVE_CLASS = 'is-stack-active';
+  const MINI_BROWSER_ENABLED_KEY = 'miniBrowser_enabled';
+  const SIDE_PANEL_BROWSER_KEY = 'miniBrowser_sidePanelBrowser';
   const PINNED_LINKS_KEY = 'miniBrowser_pinnedTabs';
   const TABS_KEY = 'miniBrowser_tabs';
   const OPEN_SITE_BUTTON_KEY = 'miniBrowser_openCurrentSiteTabButton';
@@ -68,6 +70,8 @@
     panel: null,
     tabs: [],
     pinnedLinks: [],
+    isMiniBrowserEnabled: false,
+    isSidePanelBrowserEnabled: false,
     showOpenSiteButton: false,
     bookmarks: { version: 1, folders: [] },
     history: [],
@@ -77,6 +81,7 @@
     documentPointerListener: null,
     windowBlurListener: null,
     windowResizeListener: null,
+    buttonSyncFrame: 0,
     resizeCleanup: null,
     activeId: '',
     isOpen: false,
@@ -147,7 +152,7 @@
       ? rawTabs.map((tab) => ({ ...tab }))
       : DEFAULT_PINNED_LINKS.map((tab) => ({ ...tab }));
     source = source.filter((tab) => {
-      return !tab?.deleted || !DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
+      return !tab?.deleted || DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
     });
 
     DEFAULT_PINNED_LINKS.forEach((defaultTab) => {
@@ -452,6 +457,7 @@
     stopTaptopModalEvents(button);
     button.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (!state.isSidePanelBrowserEnabled) return;
       safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast', projectSiteUrl: currentSiteUrl() }, (response) => {
         const error = chrome.runtime.lastError?.message || response?.error;
         if (!error && response?.ok) return;
@@ -677,6 +683,7 @@
     });
     panel.querySelector('[data-action="sidepanel"]').addEventListener('click', (event) => {
       event.stopPropagation();
+      if (!state.isSidePanelBrowserEnabled) return;
       safeRuntimeSendMessage({ action: 'openMiniBrowserSidePanelLast', projectSiteUrl: currentSiteUrl() }, (response) => {
         const error = chrome.runtime.lastError?.message || response?.error;
         if (error || !response?.ok) {
@@ -687,6 +694,7 @@
     });
     panel.querySelector('[data-action="sidepanel-current"]').addEventListener('click', (event) => {
       event.stopPropagation();
+      if (!state.isSidePanelBrowserEnabled) return;
       const tab = getActiveTab();
       if (tab?.url) {
         safeRuntimeSendMessage({
@@ -939,7 +947,46 @@
     window.addEventListener('pointercancel', handleUp, true);
   }
 
+  function removePanel() {
+    state.resizeCleanup?.();
+    state.panel?.remove();
+    state.panel = null;
+    state.frames.clear();
+    state.titleRequests.clear();
+  }
+
+  function applyBrowserSettings(settings) {
+    state.isMiniBrowserEnabled = settings?.[MINI_BROWSER_ENABLED_KEY] === true;
+    state.isSidePanelBrowserEnabled = settings?.[SIDE_PANEL_BROWSER_KEY] === true;
+    state.showOpenSiteButton = settings?.[OPEN_SITE_BUTTON_KEY] === true;
+
+    if (!state.isMiniBrowserEnabled) {
+      state.isOpen = false;
+      localSet(OPEN_KEY, '0');
+      removePanel();
+    }
+  }
+
+  function readBrowserSettings(callback) {
+    safeChromeCall(() => chrome.storage.sync.get({
+      [MINI_BROWSER_ENABLED_KEY]: false,
+      [SIDE_PANEL_BROWSER_KEY]: false,
+      [OPEN_SITE_BUTTON_KEY]: false
+    }, (settings) => {
+      applyBrowserSettings(settings || {});
+      callback?.();
+    }), () => {
+      applyBrowserSettings({
+        [MINI_BROWSER_ENABLED_KEY]: false,
+        [SIDE_PANEL_BROWSER_KEY]: false,
+        [OPEN_SITE_BUTTON_KEY]: false
+      });
+      callback?.();
+    });
+  }
+
   function ensurePanel() {
+    if (!state.isMiniBrowserEnabled) return null;
     let panel = document.getElementById(PANEL_ID);
     if (!panel) {
       panel = createPanel();
@@ -948,20 +995,32 @@
     state.panel = panel;
     applyStoredPanelWidth();
     applyShiftedLeft();
+    syncSidePanelControls();
+    return panel;
   }
 
   function setOpen(isOpen) {
-    state.isOpen = !!isOpen;
+    state.isOpen = !!isOpen && state.isMiniBrowserEnabled;
     localSet(OPEN_KEY, state.isOpen ? '1' : '0');
+    if (!state.isMiniBrowserEnabled) {
+      removePanel();
+      state.button?.classList.remove('is-active');
+      state.button?.setAttribute('aria-pressed', 'false');
+      return;
+    }
+    if (!state.isOpen) {
+      state.panel?.classList.remove('is-open');
+      state.button?.classList.remove('is-active');
+      state.button?.setAttribute('aria-pressed', 'false');
+      return;
+    }
     ensurePanel();
-    state.panel.classList.toggle('is-open', state.isOpen);
+    state.panel?.classList.add('is-open');
     state.button?.classList.toggle('is-active', state.isOpen);
     state.button?.setAttribute('aria-pressed', state.isOpen ? 'true' : 'false');
-    if (state.isOpen) {
-      bringMiniBrowserToFront();
-      ensureActiveTab();
-      renderPanel();
-    }
+    bringMiniBrowserToFront();
+    ensureActiveTab();
+    renderPanel();
   }
 
   function setPinned(isPinned) {
@@ -1958,12 +2017,24 @@
     renderBookmarksDrawer();
   }
 
+  function syncSidePanelControls() {
+    const isEnabled = !!state.isSidePanelBrowserEnabled;
+    state.sideButton?.classList.toggle('is-hidden', !isEnabled);
+    state.sideButton?.setAttribute('aria-hidden', isEnabled ? 'false' : 'true');
+    state.panel?.querySelectorAll('[data-action="sidepanel"], [data-action="sidepanel-current"]').forEach((button) => {
+      button.classList.toggle('is-hidden', !isEnabled);
+      button.disabled = !isEnabled;
+      button.setAttribute('aria-hidden', isEnabled ? 'false' : 'true');
+    });
+  }
+
   function renderPanel() {
-    if (!state.panel) return;
+    if (!state.panel || !state.isOpen || !state.isMiniBrowserEnabled) return;
     ensureActiveTab();
     renderTabs();
     renderPinButton();
     renderShiftLeftButton();
+    syncSidePanelControls();
     renderMobileView();
     renderFrames();
     syncAddressValue();
@@ -2115,36 +2186,55 @@
     let button = document.getElementById(BUTTON_ID);
     let sideButton = document.getElementById(SIDE_BUTTON_ID);
     let openSiteButton = document.getElementById(OPEN_SITE_BUTTON_ID);
-    if (!button) button = createButton();
-    if (!sideButton) sideButton = createSideButton();
-    if (state.showOpenSiteButton && !openSiteButton) openSiteButton = createOpenSiteButton();
-    const publish = right.querySelector('.tt-design-mode-publish');
-    if (!right.contains(button)) {
-      right.insertBefore(button, right.contains(sideButton) ? sideButton : publish || null);
+
+    if (!state.isMiniBrowserEnabled && button) {
+      button.remove();
+      button = null;
     }
-    if (!right.contains(sideButton)) {
-      right.insertBefore(sideButton, publish || null);
+    if (!state.isSidePanelBrowserEnabled && sideButton) {
+      sideButton.remove();
+      sideButton = null;
     }
-    if (button.nextSibling !== sideButton) {
-      right.insertBefore(sideButton, button.nextSibling);
-    }
-    if (state.showOpenSiteButton && openSiteButton) {
-      if (!right.contains(openSiteButton)) {
-        right.insertBefore(openSiteButton, publish || null);
-      }
-      if (sideButton.nextSibling !== openSiteButton) {
-        right.insertBefore(openSiteButton, sideButton.nextSibling);
-      }
-    } else if (openSiteButton) {
+    if (!state.showOpenSiteButton && openSiteButton) {
       openSiteButton.remove();
       openSiteButton = null;
     }
+
+    if (state.isMiniBrowserEnabled && !button) button = createButton();
+    if (state.isSidePanelBrowserEnabled && !sideButton) sideButton = createSideButton();
+    if (state.showOpenSiteButton && !openSiteButton) openSiteButton = createOpenSiteButton();
+
+    const publish = right.querySelector('.tt-design-mode-publish');
+    const desired = [button, sideButton, openSiteButton].filter(Boolean);
+    let before = publish || null;
+    for (let index = desired.length - 1; index >= 0; index -= 1) {
+      const item = desired[index];
+      if (item.parentNode !== right || item.nextSibling !== before) {
+        right.insertBefore(item, before);
+      }
+      before = item;
+    }
+
     state.button = button;
     state.sideButton = sideButton;
     state.openSiteButton = openSiteButton;
-    state.button.classList.toggle('is-active', state.isOpen);
-    state.button.setAttribute('aria-pressed', state.isOpen ? 'true' : 'false');
+    state.button?.classList.toggle('is-active', state.isOpen);
+    state.button?.setAttribute('aria-pressed', state.isOpen ? 'true' : 'false');
+    syncSidePanelControls();
     return true;
+  }
+
+  function scheduleButtonSync() {
+    if (state.buttonSyncFrame) return;
+    state.buttonSyncFrame = window.requestAnimationFrame(() => {
+      state.buttonSyncFrame = 0;
+      if (state.isDestroyed) return;
+      ensureButton();
+      if (state.isOpen && !document.getElementById(PANEL_ID)) {
+        ensurePanel();
+        renderPanel();
+      }
+    });
   }
 
   function refreshFromStorage() {
@@ -2156,9 +2246,13 @@
             state.pinnedLinks = pinnedLinks;
             state.bookmarks = bookmarks;
             ensureActiveTab();
-            migrateLegacyDeviceStateToActiveTab();
-            ensurePanel();
-            renderPanel();
+            if (state.isMiniBrowserEnabled && state.isOpen) {
+              migrateLegacyDeviceStateToActiveTab();
+              ensurePanel();
+              renderPanel();
+            } else if (!state.isMiniBrowserEnabled) {
+              removePanel();
+            }
             ensureButton();
           });
         });
@@ -2179,24 +2273,20 @@
   }
 
   function mount() {
-    state.isOpen = localGet(OPEN_KEY, '0') === '1';
+    state.isOpen = false;
+    localSet(OPEN_KEY, '0');
     state.isPinned = localGet(PINNED_KEY, '1') !== '0';
     state.isShiftedLeft = localGet(SHIFTED_LEFT_KEY, '0') === '1';
     state.activeId = localGet(ACTIVE_KEY, '');
-    safeChromeCall(() => chrome.storage.sync.get({ [OPEN_SITE_BUTTON_KEY]: false }, (settings) => {
-      state.showOpenSiteButton = !!settings[OPEN_SITE_BUTTON_KEY];
+    readBrowserSettings(() => {
       ensureButton();
-    }));
-    refreshFromStorage();
-    setOpen(state.isOpen);
+      refreshFromStorage();
+      setOpen(state.isOpen);
+    });
 
     if (state.observer?.disconnect) state.observer.disconnect();
     state.observer = new MutationObserver(() => {
-      ensureButton();
-      if (state.isOpen && !document.getElementById(PANEL_ID)) {
-        ensurePanel();
-        renderPanel();
-      }
+      scheduleButtonSync();
     });
     state.observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
 
@@ -2211,9 +2301,28 @@
           showSuggestions();
         }
       }
-      if (areaName === 'sync' && changes[OPEN_SITE_BUTTON_KEY]) {
-        state.showOpenSiteButton = !!changes[OPEN_SITE_BUTTON_KEY].newValue;
+      if (
+        areaName === 'sync'
+        && (
+          changes[MINI_BROWSER_ENABLED_KEY]
+          || changes[SIDE_PANEL_BROWSER_KEY]
+          || changes[OPEN_SITE_BUTTON_KEY]
+        )
+      ) {
+        applyBrowserSettings({
+          [MINI_BROWSER_ENABLED_KEY]: changes[MINI_BROWSER_ENABLED_KEY]?.newValue ?? state.isMiniBrowserEnabled,
+          [SIDE_PANEL_BROWSER_KEY]: changes[SIDE_PANEL_BROWSER_KEY]?.newValue ?? state.isSidePanelBrowserEnabled,
+          [OPEN_SITE_BUTTON_KEY]: changes[OPEN_SITE_BUTTON_KEY]?.newValue ?? state.showOpenSiteButton
+        });
         ensureButton();
+        if (state.isMiniBrowserEnabled && state.isOpen) {
+          ensurePanel();
+          renderPanel();
+        } else if (!state.isMiniBrowserEnabled) {
+          removePanel();
+        } else {
+          syncSidePanelControls();
+        }
       }
       if (areaName === 'sync' && changes[BOOKMARKS_KEY]) {
         state.bookmarks = cloneBookmarks(changes[BOOKMARKS_KEY].newValue);
@@ -2262,6 +2371,10 @@
     if (state.isDestroyed) return;
     state.isDestroyed = true;
     state.resizeCleanup?.();
+    if (state.buttonSyncFrame) {
+      window.cancelAnimationFrame(state.buttonSyncFrame);
+      state.buttonSyncFrame = 0;
+    }
     state.observer?.disconnect?.();
     if (state.documentPointerListener) document.removeEventListener('pointerdown', state.documentPointerListener, true);
     if (state.windowBlurListener) window.removeEventListener('blur', state.windowBlurListener);

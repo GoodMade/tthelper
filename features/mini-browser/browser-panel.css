@@ -19,6 +19,12 @@
   height: 24px;
 }
 
+.tt-enhancer-side-browser-button.is-hidden,
+.tt-enhancer-mini-browser-panel__action.is-hidden,
+.tt-enhancer-mini-browser-panel__address-action.is-hidden {
+  display: none;
+}
+
 .tt-enhancer-open-site-button svg {
   display: block;
   width: 24px;

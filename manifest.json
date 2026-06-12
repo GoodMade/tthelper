@@ -8,8 +8,7 @@
     "scripting",
     "activeTab",
     "declarativeNetRequest",
-    "tabs",
-    "sidePanel"
+    "tabs"
   ],
   "host_permissions": [
     "http://*/*",
@@ -18,17 +17,22 @@
   "background": {
     "service_worker": "background.js"
   },
-  "side_panel": {
-    "default_path": "sidepanel/sidepanel.html"
-  },
   "declarative_net_request": {
     "rule_resources": [
+      {
+        "id": "taptop_csp_rules",
+        "enabled": true,
+        "path": "rules/taptop-csp-rules.json"
+      },
       {
         "id": "gemini_frame_rules",
         "enabled": false,
         "path": "rules/gemini-frame-rules.json"
       }
     ]
+  },
+  "sandbox": {
+    "pages": ["features/ai-panel/puter-sandbox.html"]
   },
   "action": {
     "default_popup": "popup/popup.html",

@@ -135,7 +135,7 @@
   function clonePinnedLinks(rawTabs) {
     let source = Array.isArray(rawTabs) && rawTabs.length ? rawTabs.map((tab) => ({ ...tab })) : DEFAULT_PINNED_LINKS.map((tab) => ({ ...tab }));
     source = source.filter((tab) => {
-      return !tab?.deleted || !DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
+      return !tab?.deleted || DEFAULT_PINNED_LINKS.some((defaultTab) => isSamePinnedDefault(tab, defaultTab));
     });
 
     DEFAULT_PINNED_LINKS.forEach((defaultTab) => {
