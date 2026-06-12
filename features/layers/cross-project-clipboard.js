@@ -3,6 +3,10 @@
   const CLIPBOARD_KEY = 'clipboardData';
   const PAGE_SOURCE = 'tt-enhancer-cross-project-clipboard';
   const BRIDGE_SOURCE = 'tt-enhancer-cross-project-clipboard-bridge';
+  // The JSON export / widget catalog wraps the bare clipboard layer like:
+  // { type: 'taptop-enhancer-layer-export', version, ..., clipboardData: { copiedLayout, action, tagID } }
+  // The bare cross-project copy buffer has copiedLayout/action/tagID at the top level.
+  const LAYER_EXPORT_WRAPPER_TYPE = 'taptop-enhancer-layer-export';
   const UNIQUE_CLASS_RE = /--u-([a-z0-9]+)$/;
   const PAGE_SESSION_ID = `page_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const IGNORED_CLASS_CONFLICT_NAMES = new Set(['helper--d-none']);
@@ -48,13 +52,33 @@
   let lastSystemClipboardReadAt = 0;
   let systemClipboardReadInFlight = false;
 
-  function isLayerClipboardValue(value) {
+  function isBareLayerClipboardObject(data) {
+    return !!(data && data.copiedLayout && data.action && data.tagID);
+  }
+
+  // Returns the bare clipboard-layer JSON string. If the value is an export
+  // wrapper ({ type: 'taptop-enhancer-layer-export', clipboardData }), the inner
+  // layer is unwrapped. If it is already a bare layer, it is returned as-is.
+  // Returns '' when the value is not a recognizable layer in either shape.
+  function unwrapLayerRaw(value) {
     try {
       const data = JSON.parse(String(value || ''));
-      return !!(data && data.copiedLayout && data.action && data.tagID);
+      if (isBareLayerClipboardObject(data)) return JSON.stringify(data);
+      if (
+        data &&
+        data.type === LAYER_EXPORT_WRAPPER_TYPE &&
+        isBareLayerClipboardObject(data.clipboardData)
+      ) {
+        return JSON.stringify(data.clipboardData);
+      }
+      return '';
     } catch {
-      return false;
+      return '';
     }
+  }
+
+  function isLayerClipboardValue(value) {
+    return !!unwrapLayerRaw(value);
   }
 
   function postToBridge(type, payload) {
@@ -684,9 +708,12 @@
   }
 
   function applyExternalClipboard(payload) {
-    if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return false;
+    // Catalog / JSON-export payloads arrive wrapped; unwrap to the bare layer
+    // before validating, normalizing the version, and writing the buffer.
+    const unwrapped = unwrapLayerRaw(payload?.raw);
+    if (!payload?.raw || !unwrapped) return false;
 
-    const raw = normalizeLayerVersionForCurrentProject(payload.raw);
+    const raw = normalizeLayerVersionForCurrentProject(unwrapped);
     const payloadSavedAt = Number(payload.savedAt) || Date.now();
     const isExternalPayload = !isSamePagePayload(payload);
     const currentRaw = localStorage.getItem(CLIPBOARD_KEY);
@@ -734,11 +761,12 @@
     systemClipboardReadInFlight = true;
     try {
       const text = await navigator.clipboard.readText();
-      if (!text || !isLayerClipboardValue(text)) return false;
+      const unwrapped = unwrapLayerRaw(text);
+      if (!unwrapped) return false;
 
       const savedAt = Date.now();
       return applyExternalClipboard({
-        raw: text,
+        raw: unwrapped,
         savedAt,
         sourceId: `system-clipboard:${reason}`,
         pageKey: 'system-clipboard',
@@ -935,14 +963,15 @@
   function onPaste(event) {
     try {
       const text = event.clipboardData?.getData('text/plain');
-      if (text && isLayerClipboardValue(text)) {
+      const unwrapped = unwrapLayerRaw(text);
+      if (unwrapped) {
         const current = localStorage.getItem(CLIPBOARD_KEY);
-        if (text === current) return;
+        if (unwrapped === current) return;
 
         const savedAt = Date.now();
         applyingExternalClipboard = true;
         try {
-          const normalized = normalizeLayerVersionForCurrentProject(text);
+          const normalized = normalizeLayerVersionForCurrentProject(unwrapped);
           originalSetItem.call(localStorage, CLIPBOARD_KEY, String(normalized));
           rememberSourceClipboardRaw(normalized, true, savedAt); // Mark as external for conflict check
           currentClipboardSavedAt = savedAt;
