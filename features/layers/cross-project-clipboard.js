@@ -45,6 +45,8 @@
   let resolvingPaste = false;
   const bridgeRefreshTimers = new Set();
   let lastBridgeLoadRequestedAt = 0;
+  let lastSystemClipboardReadAt = 0;
+  let systemClipboardReadInFlight = false;
 
   function isLayerClipboardValue(value) {
     try {
@@ -682,7 +684,7 @@
   }
 
   function applyExternalClipboard(payload) {
-    if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return;
+    if (!payload?.raw || !isLayerClipboardValue(payload.raw)) return false;
 
     const raw = normalizeLayerVersionForCurrentProject(payload.raw);
     const payloadSavedAt = Number(payload.savedAt) || Date.now();
@@ -696,12 +698,12 @@
       rememberSourceClipboardRaw(raw, isExternalPayload, payloadSavedAt);
       currentClipboardSavedAt = payloadSavedAt;
       currentClipboardIsExternal = isExternalPayload;
-      return;
+      return true;
     }
 
     // Skip only when the incoming value is strictly older than the valid layer
     // we already hold.
-    if (isLayerClipboardValue(currentRaw) && payloadSavedAt < currentClipboardSavedAt) return;
+    if (isLayerClipboardValue(currentRaw) && payloadSavedAt < currentClipboardSavedAt) return false;
 
     rememberSourceClipboardRaw(raw, isExternalPayload, payloadSavedAt);
     currentClipboardSavedAt = payloadSavedAt;
@@ -713,10 +715,41 @@
       // delays for safety) so a paste right after switching tabs uses the new layer.
       syncNativeClipboardState();
       scheduleNativeClipboardSync();
+      return true;
     } catch (error) {
       console.warn('Taptop Enhancer cross-project clipboard apply failed:', error);
+      return false;
     } finally {
       applyingExternalClipboard = false;
+    }
+  }
+
+  async function readSystemClipboardLayer(reason = 'manual', force = false) {
+    const now = Date.now();
+    if (!force && now - lastSystemClipboardReadAt < 250) return false;
+    if (systemClipboardReadInFlight) return false;
+    if (!navigator.clipboard?.readText) return false;
+
+    lastSystemClipboardReadAt = now;
+    systemClipboardReadInFlight = true;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !isLayerClipboardValue(text)) return false;
+
+      const savedAt = Date.now();
+      return applyExternalClipboard({
+        raw: text,
+        savedAt,
+        sourceId: `system-clipboard:${reason}`,
+        pageKey: 'system-clipboard',
+        pageUrl: 'system-clipboard',
+        pageOrigin: 'system-clipboard'
+      });
+    } catch (error) {
+      // Clipboard read can be denied unless the page is focused / user gesture is active.
+      return false;
+    } finally {
+      systemClipboardReadInFlight = false;
     }
   }
 
@@ -874,15 +907,29 @@
   function onKeyDownCapture(event) {
     if (!isPasteHotkey(event)) return;
     requestBridgeClipboardLoad('paste-hotkey');
+    // Try the system clipboard under the user's paste gesture. If it resolves
+    // quickly, the next native read will see the catalog layer. If the browser
+    // resolves it after Taptop's current hotkey flow, pressing Cmd/Ctrl+V once
+    // more will use the freshly materialized layer instead of the old buffer.
+    readSystemClipboardLayer('paste-hotkey', true).then((applied) => {
+      if (applied) {
+        syncNativeClipboardState();
+        scheduleNativeClipboardSync();
+      }
+    });
     prepareClipboardBeforeNativePaste();
   }
 
   function onFocusRefresh() {
     scheduleBridgeClipboardRefresh('focus');
+    readSystemClipboardLayer('focus');
   }
 
   function onVisibilityRefresh() {
-    if (document.visibilityState === 'visible') scheduleBridgeClipboardRefresh('visible');
+    if (document.visibilityState === 'visible') {
+      scheduleBridgeClipboardRefresh('visible');
+      readSystemClipboardLayer('visible');
+    }
   }
 
   function onPaste(event) {
@@ -918,6 +965,7 @@
   window.addEventListener('pageshow', onFocusRefresh, true);
   document.addEventListener('visibilitychange', onVisibilityRefresh, true);
   scheduleBridgeClipboardRefresh('init');
+  readSystemClipboardLayer('init');
   installPastePatch();
   pastePatchTimer = window.setInterval(installPastePatch, 300);
 
