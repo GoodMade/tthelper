@@ -17,6 +17,17 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://servbay.host/site/*"
+      ],
+      "js": [
+        "features/layers/cross-project-clipboard-bridge.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "declarative_net_request": {
     "rule_resources": [
       {
