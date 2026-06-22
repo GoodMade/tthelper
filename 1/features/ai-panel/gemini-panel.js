@@ -6595,9 +6595,6 @@
     let constructorResult = replaceResult ? null : !options.builderMode && insertLayerNodesFromParsed(parsedForResult).length
       ? null
       : normalizeConstructorResult(parsedForResult, constructorOptions);
-    if (options.localFastPath) {
-      localConstructorFallbackSource = options.localFastPath;
-    }
     if (options.builderMode && !constructorResult?.clipboardData && options.layoutCode) {
       const fallbackParsed = localConstructorParsedFromCode(options);
       const fallbackResult = fallbackParsed ? normalizeConstructorResult(fallbackParsed, options) : null;
@@ -6618,7 +6615,7 @@
       ? constructorJsonErrorMessage(rawText)
       : '';
     const fallbackMessage = localConstructorFallbackSource === 'code-tabs'
-      ? 'Слой собран локально из вкладок конструктора.'
+      ? 'AI вернул невалидный JSON, поэтому слой собран локально из вкладок конструктора.'
       : localConstructorFallbackSource === 'ai-code'
         ? 'AI сверстал HTML/CSS, слой собран локально для TapTop.'
         : localConstructorFallbackSource
@@ -7563,7 +7560,7 @@
       'Для правки существующего текста используй changes. Меняй только тексты из массива selected_texts и всегда сохраняй их id.',
       'В value возвращай только видимый пользователю текст, без служебных ключей, HTML-тегов, JSON и пояснений.',
       'Для просьб добавить/создать новый вложенный слой внутри выбранного слоя используй insertLayers. Не отказывайся от добавления структуры: поддерживаются type div, text, link, image, svg, embed.',
-      'Если в задач�������������� есть "добавь", "создай" или "вставь", не используй changes для замены существующего текста; используй insertLayers для нового дочернего слоя.',
+      'Если в задач������������ есть "добавь", "создай" или "вставь", не используй changes для замены существующего текста; используй insertLayers для нового дочернего слоя.',
       'Если пользователь просит добавить текст, описание, абзац, заголовок, подпись или ��ругой видимый текст — выбери type "text"; по умолчанию tag "p", для заголовка h1-h6, для короткой inline-подписи span.',
       'Если пользователь просит добавить слой/блок/контейнер и не указал тип и текстовое содержание, по умолчанию выбери type "div".',
       'Если пользователь явно просит слой p, верни {"type":"text","tag":"p","text":"..."}. Для h1-h6/span указывай tag соответственно.',
@@ -7592,7 +7589,6 @@
       'Для SVG-иконок всегда возвращай type "svg" и поле svg или html с полным inline <svg>...</svg>. Если исходник выглядит как <span class="svg-icon"><svg>...</svg></span>, это один слой type "svg", а не text/span.',
       'Обычные inline style="" и root-селекторы переноси в styles/mediaStyles конкретных слоев.',
       'CSS-правила из исходного <style> не возвращай в JSON как classStyles/mediaClassStyles: расширение само распарсит исходный <style> и перенесет эти стили в классы TapTop.',
-      'Обязательно сохраняй все HTML атрибуты (например aria-*, data-*, role, type, placeholder и т.д.) в объекте attrs каждого слоя.',
       'Сохраняй классы из HTML на слоях. Составные CSS-селекторы из исходного <style> расширение расплющит само.',
       'Не используй shorthand gap в ответе. gap:20px возвращай как row-gap:"20px" и column-gap:"20px"; gap:10px 20px — row-gap:"10px", column-gap:"20px".',
       'В embedCode клади внешние <link rel="stylesheet">, внешние <script src>, в��сь JS и только CSS, который нельзя выразить стилями TapTop: keyframes, CSS-переменные, псевдоклассы/hover, псевдоэлементы, сложные глобальные селекторы, библиотечные служебные классы и JS-зависимые состояния.',
@@ -7610,7 +7606,6 @@
       'Отвечай только валидным JSON без markdown.',
       'Формат ответа: {"message":"коротко что сверстано","html":"...","css":"...","js":""}.',
       'html — только разметка компонента без <html>, <head>, <body>, <style>, <script> и внешних подключений.',
-      'Обязательно сохраняй все специфичные атрибуты (aria-*, role, data-*) в HTML-тегах, не теряй их.',
       'css — стили компонента без тега <style>. Используй классы из html; не отвечай только CSS без html.',
       'js — JavaScript без тега <script>. Если нужны внешние CSS/JS подклю��ения, добавь их в начало js как <link rel="stylesheet"> или <script src="..."></script>.',
       'Для любой структурной задачи создавай реальные HTML-элементы, которые затем станут слоями: контейнеры, карточки, колонки, текст, ссылки, изображения, svg.',
@@ -8012,37 +8007,19 @@
 
   function applyImageCodeDraft(parts, panel = state.panel) {
     if (!panel || !parts) return;
-    let html = String(parts.html || '').trim();
-    let css = String(parts.css || '').trim();
+    const html = String(parts.html || '').trim();
+    const css = String(parts.css || '').trim();
     const js = String(parts.js || '').trim();
-
-    html = html.replace(/class=(["'])([^"']*)\1/g, (match, quote, classes) => {
-      return 'class=' + quote + classes.replace(/\bis-/g, 'is_').replace(/\bhas-/g, 'has_') + quote;
-    });
-    html = html.replace(/\bid=(["'])([^"']*)\1/g, 'data-id=$1$2$1');
-    
-    css = css.replace(/\.is-/g, '.is_').replace(/\.has-/g, '.has_');
-    
-    let processedJs = js.replace(/getElementById\((["'])([^"']+)\1\)/g, (match, quote, id) => {
-      const innerQuote = quote === '"' ? "'" : '"';
-      return `querySelector(${quote}[data-id=${innerQuote}${id}${innerQuote}]${quote})`;
-    });
-    processedJs = processedJs.replace(/querySelector(All)?\((["'])(.*?)\2\)/g, (match, all, quote, selector) => {
-      const innerQuote = quote === '"' ? "'" : '"';
-      const fixedSelector = selector.replace(/(^|\s|,|>|\+|~|:not\()#([a-zA-Z][a-zA-Z0-9_-]*)/g, `$1[data-id=${innerQuote}$2${innerQuote}]`);
-      return `querySelector${all || ''}(${quote}${fixedSelector}${quote})`;
-    });
-    processedJs = processedJs.replace(/\bis-/g, 'is_').replace(/\bhas-/g, 'has_');
 
     const codeInput = codeInputElement(panel);
     const styleInput = styleInputElement(panel);
     const scriptInput = scriptInputElement(panel);
     setCodeFieldValue(codeInput, html);
     setCodeFieldValue(styleInput, css);
-    setCodeFieldValue(scriptInput, processedJs);
+    setCodeFieldValue(scriptInput, js);
     writeCodeDraft(html);
     writeStyleDraft(css);
-    writeScriptDraft(processedJs);
+    writeScriptDraft(js);
     updateCodeStatus(panel);
 
     const box = panel.querySelector('[data-role="code-box"]');
@@ -8067,7 +8044,7 @@
     const body = document.createElement('div');
     body.className = 'tt-enhancer-ai-message__body';
     body.textContent = String(parts?.message || '').trim()
-      || `Код по картинк�� разложен ��о вкладкам (${total} симв.).`;
+      || `Код по картинке разложен ��о вкладкам (${total} симв.).`;
     if (!total && rawText) body.textContent = String(rawText || '').trim();
     item.appendChild(body);
 
@@ -8208,23 +8185,6 @@
     };
   }
 
-  function tryLocalCodeFastPath(layoutCode, styleCode, embedCode) {
-    try {
-      const layout = String(layoutCode || '').trim();
-      const style = String(styleCode || '').trim();
-      const script = String(embedCode || '').trim();
-      if (!layout) return null;
-      const parsed = localConstructorParsedFromCode({ layoutCode: layout, embedCode: script });
-      if (!parsed?.constructor?.root) return null;
-      if (style && parsed.constructor.root.styles === undefined) {
-        parsed.constructor.root.styles = {};
-      }
-      return { message: 'Слой собран локально из вкладок конструктора.', parsed };
-    } catch {
-      return null;
-    }
-  }
-
   function sendCodePrompt(actionText = 'Сверстай по коду') {
     if (state.isLoading) return;
     const layoutCode = codeDraftValue();
@@ -8244,25 +8204,6 @@
     const task = note || actionText || 'Сверстай по коду';
     const prompt = buildCodeLayoutPrompt(task, layoutCode, styleCode, embedCode, currentBuilderRules());
     closeCodeBox();
-    const fastResult = tryLocalCodeFastPath(layoutCode, styleCode, embedCode);
-    if (fastResult) {
-      addUserMessage(`${actionText || 'Сверстай по коду'} (локально, ${totalLength} симв.)`, null);
-      setLoading(true);
-      const thinkingMessage = addAssistantThinkingMessage();
-      setTimeout(() => {
-        thinkingMessage?.remove();
-        addAssistantMessage(fastResult.message, fastResult.parsed, null, {
-          builderMode: true,
-          localFastPath: 'code-tabs',
-          layoutCode: sourceLayoutCode,
-          sourceLayoutCode,
-          styleCode,
-          embedCode
-        });
-        setLoading(false);
-      }, 300);
-      return;
-    }
     sendPrompt(prompt, {
       displayText: `${actionText || 'Сверстай по коду'} (${totalLength} симв.)`,
       builderRulesIncluded: true,
@@ -8528,8 +8469,7 @@
 
     const attempts = [
       source,
-      escapeJsonStringControlChars(source),
-      repairJsonStringTokens(source)
+      escapeJsonStringControlChars(source)
     ].filter((item, index, list) => item && list.indexOf(item) === index);
 
     for (const attempt of attempts) {
@@ -8584,55 +8524,6 @@
     return result;
   }
 
-  // Толерантный ремонт строковых токенов JSON: экранирует управляющие символы
-  // И неэкранированные двойные кавычки внутри строковых значений (частый случай —
-  // inline <svg viewBox="..."> в полях html/svg/embedCode, который ломает JSON).
-  // Закрывающей кавычкой считается только та, за которой (через пробелы) идёт
-  // структурный символ : , } ] или конец ввода; остальные кавычки экранируются.
-  function repairJsonStringTokens(value) {
-    const src = String(value || '');
-    let result = '';
-    let inString = false;
-    let escaped = false;
-    for (let i = 0; i < src.length; i += 1) {
-      const char = src[i];
-      if (!inString) {
-        result += char;
-        if (char === '"') inString = true;
-        continue;
-      }
-      if (escaped) {
-        result += char;
-        escaped = false;
-        continue;
-      }
-      if (char === '\\') {
-        result += char;
-        escaped = true;
-        continue;
-      }
-      if (char === '"') {
-        let j = i + 1;
-        while (j < src.length && (src[j] === ' ' || src[j] === '\t' || src[j] === '\n' || src[j] === '\r')) j += 1;
-        const next = src[j];
-        if (next === undefined || next === ':' || next === ',' || next === '}' || next === ']') {
-          result += char;
-          inString = false;
-        } else {
-          result += '\\"';
-        }
-        continue;
-      }
-      if (char === '\n') { result += '\\n'; continue; }
-      if (char === '\r') { result += '\\r'; continue; }
-      if (char === '\t') { result += '\\t'; continue; }
-      result += char;
-    }
-    return result;
-  }
-
-
-
   function isPlainObject(value) {
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
@@ -8669,12 +8560,11 @@
   function sanitizeConstructorClassName(value) {
     const raw = String(value || '').trim().replace(/^\./, '');
     if (!raw) return '';
-    let name = raw
+    const name = raw
       .replace(/\s+/g, '-')
       .replace(/[^a-zA-Z0-9_-]/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 72);
-      
     if (!name) return '';
     return /^[a-zA-Z_-]/.test(name) ? name : `c-${name}`;
   }
@@ -8794,8 +8684,7 @@
     const type = String(value || '').trim().toLowerCase();
     if (/^(text|p|span|h[1-6]|heading|paragraph|label)$/.test(type)) return 'text';
     if (/^(section|header|footer|main|article|aside|nav)$/.test(type)) return 'section';
-    if (/^(button)$/i.test(type)) return 'button';
-    if (/^(a|link|link block|link-block|cta)$/.test(type)) return 'link';
+    if (/^(a|link|link block|link-block|button|cta)$/.test(type)) return 'link';
     if (/^(img|image|picture)$/.test(type)) return 'image';
     if (/^(svg|svg icon|svg-icon|icon)$/.test(type)) return 'svg';
     if (/^(embed|script|style|code|custom code|custom-code)$/.test(type)) return 'embed';
@@ -8805,17 +8694,15 @@
   function constructorBaseClass(type) {
     if (type === 'text') return 'text';
     if (type === 'section') return 'section';
-    if (type === 'button') return 'button';
     if (type === 'link') return 'link-block';
     if (type === 'image') return 'image';
-    if (type === 'svg') return 'tth-svg';
+    if (type === 'svg') return 'svg-icon';
     if (type === 'embed') return 'embed';
     return 'div';
   }
 
   function constructorAlias(type) {
     if (type === 'section') return 'Section';
-    if (type === 'button') return 'Button';
     if (type === 'link') return 'Link Block';
     if (type === 'image') return 'Image';
     if (type === 'svg') return 'svg icon';
@@ -8824,7 +8711,6 @@
   }
 
   const CONSTRUCTOR_SYSTEM_CLASS_NAMES = new Set([
-    'button',
     'div',
     'embed',
     'embed__stub',
@@ -8840,8 +8726,7 @@
     'link-block',
     'section',
     'svg-icon',
-    'text',
-    'text-button'
+    'text'
   ]);
 
   const CONSTRUCTOR_TEXT_TAG_NAMES = new Set([
@@ -8865,7 +8750,6 @@
     'address',
     'article',
     'aside',
-    'blockquote',
     'div',
     'figure',
     'footer',
@@ -8877,20 +8761,14 @@
 
   const CONSTRUCTOR_SYSTEM_CLASS_STYLES = {
     div: {
+      width: '100%',
       position: 'relative'
     },
     section: {
       display: 'block',
+      width: '100%',
       position: 'relative'
     },
-    'tth-empty': {
-      'max-width': '0px',
-      'max-height': '0px'
-    },
-    'tth-strong': { 'font-weight': 'bold' },
-    'tth-b': { 'font-weight': 'bold' },
-    'tth-em': { 'font-style': 'italic' },
-    'tth-i': { 'font-style': 'italic' },
     text: {
       display: 'inline-flex',
       'vertical-align': 'top',
@@ -8916,52 +8794,21 @@
       width: '100%',
       height: '100%'
     },
+    'svg-icon': {
+      position: 'relative',
+      display: 'inline-flex',
+      'justify-content': 'center',
+      'align-items': 'center',
+      height: '32px',
+      width: '32px',
+      'overflow-x': 'hidden',
+      'overflow-y': 'hidden'
+    },
     embed: {
       'min-height': '100px',
       position: 'relative'
     }
   };
-
-  const CONSTRUCTOR_TAPTOP_CUSTOM_PROPERTIES = new Set([
-    'all','appearance','background','border','bottom','clear','color','columns','contain','container',
-    'content','cursor','direction','display','filter','flex','float','gap','grid','height',
-    'hyphens','inset','isolation','left','margin','marker','mask','offset','opacity','order',
-    'orphans','outline','overflow','padding','perspective','position','quotes','resize','right','rotate',
-    'scale','top','transform','transition','translate','widows','width','zoom','accent-color','align-content',
-    'align-items','align-self','aspect-ratio','backdrop-filter','backface-visibility','background-attachment','background-clip','background-color','background-image','background-origin',
-    'background-position','background-repeat','background-size','block-size','border-block','border-bottom','border-collapse','border-color','border-image','border-inline',
-    'border-left','border-radius','border-right','border-spacing','border-style','border-top','border-width','box-shadow','box-sizing','break-after',
-    'break-before','break-inside','caption-side','caret-color','clip-path','color-scheme','column-count','column-fill','column-gap','column-rule',
-    'column-span','column-width','container-name','container-type','content-visibility','counter-set','empty-cells','field-sizing','flex-basis','flex-direction',
-    'flex-flow','flex-grow','flex-shrink','flex-wrap','font-kerning','font-palette','font-size','font-style','font-synthesis','font-variant',
-    'font-weight','grid-area','grid-column','grid-gap','grid-row','grid-template','hyphenate-character','image-orientation','image-rendering','image-resolution',
-    'initial-letter','inline-size','inset-block','inset-inline','justify-content','justify-items','justify-self','letter-spacing','line-break','line-height',
-    'margin-block','margin-bottom','margin-inline','margin-left','margin-right','margin-top','marker-end','marker-mid','marker-start','mask-clip',
-    'mask-composite','mask-image','mask-mode','mask-origin','mask-position','mask-repeat','mask-size','mask-type','max-height','max-width',
-    'min-height','min-width','object-position','offset-anchor','offset-distance','offset-path','offset-position','offset-rotate','outline-color','outline-offset',
-    'outline-style','outline-width','overflow-anchor','overflow-wrap','overflow-x','overflow-y','overscroll-behavior','padding-block','padding-bottom','padding-inline',
-    'padding-left','padding-right','padding-top','paint-order','perspective-origin','place-content','place-items','place-self','pointer-events','row-gap',
-    'scroll-behavior','scroll-margin','scroll-padding','scrollbar-color','scrollbar-gutter','scrollbar-width','shape-margin','shape-outside','shape-rendering','tab-size',
-    'table-layout','text-align','text-decoration','text-emphasis','text-indent','text-justify','text-orientation','text-overflow','text-rendering','text-shadow',
-    'text-transform','touch-action','transform-origin','transform-style','transition-delay','transition-duration','transition-property','unicode-bidi','user-select','vertical-align',
-    'white-space','will-change','word-break','word-spacing','word-wrap','writing-mode','z-index','background-blend-mode','border-block-color','border-block-end',
-    'border-block-start','border-block-style','border-block-width','border-bottom-color','border-bottom-style','border-bottom-width','border-inline-color','border-inline-end','border-inline-start','border-inline-style',
-    'border-inline-width','border-left-color','border-left-style','border-left-width','border-right-color','border-right-style','border-right-width','border-top-color','border-top-style','border-top-width',
-    'box-decoration-break','color-interpolation-filters','column-rule-color','column-rule-style','column-rule-width','contain-intrinsic-height','contain-intrinsic-size','contain-intrinsic-width','font-feature-settings','font-language-override',
-    'font-optical-sizing','font-size-adjust','font-synthesis-style','font-synthesis-weight','font-variant-alternates','font-variant-caps','font-variant-ligatures','font-variant-numeric','font-variant-position','font-variation-settings',
-    'grid-auto-columns','grid-auto-flow','grid-auto-rows','grid-column-end','grid-column-gap','grid-column-start','grid-row-end','grid-row-gap','grid-row-start','grid-template-areas',
-    'grid-template-columns','grid-template-rows','hyphenate-limit-chars','inset-block-end','inset-block-start','inset-inline-end','inset-inline-start','list-style-image','list-style-position','margin-block-end',
-    'margin-block-start','margin-inline-end','margin-inline-start','masonry-auto-flow','max-block-size','max-inline-size','min-block-size','min-inline-size','mix-blend-mode','overscroll-behavior-block',
-    'overscroll-behavior-inline','overscroll-behavior-x','overscroll-behavior-y','padding-block-end','padding-block-start','padding-inline-end','padding-inline-start','scroll-margin-block','scroll-margin-bottom','scroll-margin-inline',
-    'scroll-margin-left','scroll-margin-right','scroll-margin-top','scroll-padding-block','scroll-padding-bottom','scroll-padding-inline','scroll-padding-left','scroll-padding-right','scroll-padding-top','scroll-snap-align',
-    'scroll-snap-stop','scroll-snap-type','shape-image-threshold','text-align-last','text-combine-upright','text-decoration-color','text-decoration-line','text-decoration-style','text-decoration-thickness','text-emphasis-color',
-    'text-emphasis-position','text-emphasis-style','text-underline-offset','text-underline-position','text-wrap-mode','text-wrap-style','transition-timing-function','border-block-end-color','border-block-end-style','border-block-end-width',
-    'border-block-start-color','border-block-start-style','border-block-start-width','border-bottom-left-radius','border-bottom-right-radius','border-end-end-radius','border-end-start-radius','border-inline-end-color','border-inline-end-style','border-inline-end-width',
-    'border-inline-start-color','border-inline-start-style','border-inline-start-width','border-start-end-radius','border-start-start-radius','border-top-left-radius','border-top-right-radius','contain-intrinsic-block-size','contain-intrinsic-inline-size','font-synthesis-small-caps',
-    'font-variant-east-asian','scroll-margin-block-end','scroll-margin-block-start','scroll-margin-inline-end','scroll-margin-inline-start','scroll-padding-block-end','scroll-padding-block-start','scroll-padding-inline-end','scroll-padding-inline-start','-webkit-text-fill-color',
-    '-webkit-text-stroke-color'
-  ]);
-
 
   const CONSTRUCTOR_LENGTH_STYLE_PROPERTIES = new Set([
     'width',
@@ -8990,7 +8837,6 @@
     'grid-column-gap',
     'row-gap',
     'column-gap',
-    'flex-basis',
     'font-size',
     'line-height',
     'letter-spacing',
@@ -9096,7 +8942,7 @@
       const split = splitDeclarationNameValue(part);
       if (!split) return;
       const name = normalizeCssPropertyName(split.name);
-      const cssValue = stripConstructorImportant(split.value).replace(/(^|[\s(,-])\.(\d+)/g, '$10.$2');
+      const cssValue = stripConstructorImportant(split.value);
       if (!name || !cssValue) return;
       Object.entries(normalizeConstructorStyleDeclaration(name, cssValue)).forEach(([nextName, nextValue]) => {
         if (shouldDropConstructorStyleValue(nextName, nextValue)) return;
@@ -9135,8 +8981,6 @@
 
   function shouldDropConstructorStyleValue(name, value) {
     if (name === 'height' && String(value || '').trim().toLowerCase() === 'auto') return true;
-    const lowerValue = String(value || '').trim().toLowerCase();
-    if (lowerValue === 'none' && /^(box-shadow|text-shadow|transition|transform|border)$/i.test(name)) return true;
     if (!CONSTRUCTOR_ZERO_SIZE_GUARD_PROPERTIES.has(name)) return false;
     return isConstructorZeroCssValue(value);
   }
@@ -9146,46 +8990,6 @@
       .trim()
       .split(/\s+/)
       .filter(Boolean);
-  }
-
-  function expandRepeatTrackList(value) {
-    const text = String(value || '').trim();
-    if (!text) return value;
-    let result = text;
-    let safety = 20;
-    const REPEAT_START_RE = /\brepeat\s*\(/i;
-    while (safety-- > 0) {
-      const match = result.match(REPEAT_START_RE);
-      if (!match) break;
-      const start = match.index;
-      let depth = 0;
-      let end = -1;
-      for (let i = start + match[0].length - 1; i < result.length; i++) {
-        if (result[i] === '(') depth++;
-        else if (result[i] === ')') {
-          depth--;
-          if (depth === 0) {
-            end = i;
-            break;
-          }
-        }
-      }
-      if (end === -1) break;
-      
-      const content = result.substring(start + match[0].length, end);
-      const commaIdx = content.indexOf(',');
-      if (commaIdx === -1) {
-        result = result.substring(0, start) + result.substring(end + 1);
-        continue;
-      }
-      
-      const countStr = content.substring(0, commaIdx).trim();
-      const track = content.substring(commaIdx + 1).trim();
-      const count = Math.max(0, Math.min(Number(countStr) || 0, 50));
-      const expanded = Array.from({ length: count }, () => track).join(' ');
-      result = result.substring(0, start) + expanded + result.substring(end + 1);
-    }
-    return result;
   }
 
   function expandConstructorGapStyles(styles) {
@@ -9199,9 +9003,6 @@
       if (column && result['column-gap'] === undefined) result['column-gap'] = column;
       delete result.gap;
       delete result['grid-gap'];
-    }
-    if (result['grid-template-columns']) {
-      result['grid-template-columns'] = expandRepeatTrackList(result['grid-template-columns']);
     }
     return result;
   }
@@ -9369,7 +9170,7 @@
     const text = String(value || '').trim();
     if (!text) return null;
     const low = text.toLowerCase();
-    if (low === 'none') return {};
+    if (low === 'none') return { 'flex-grow': '0', 'flex-shrink': '0', 'flex-basis': 'auto' };
     if (low === 'auto') return { 'flex-grow': '1', 'flex-shrink': '1', 'flex-basis': 'auto' };
     if (low === 'initial') return { 'flex-grow': '0', 'flex-shrink': '1', 'flex-basis': 'auto' };
     const parts = splitCssFunctionAwareList(value);
@@ -9446,10 +9247,7 @@
 
   function expandConstructorBackgroundShorthand(value) {
     const text = String(value || '').trim();
-    if (!text || /^(inherit|initial|unset)$/i.test(text)) return null;
-    if (/^none$/i.test(text)) {
-      return { 'background-image': 'none', 'background-color': 'transparent' };
-    }
+    if (!text || /^(inherit|initial|unset|none)$/i.test(text)) return null;
     const tokens = splitCssFunctionAwareList(text);
     const imageTokens = [];
     let color = null;
@@ -9459,11 +9257,7 @@
     });
     const result = {};
     if (color) result['background-color'] = color;
-    if (imageTokens.length) {
-      result['background-image'] = imageTokens.join(', ');
-    } else {
-      result['background-image'] = 'none';
-    }
+    if (imageTokens.length) result['background-image'] = imageTokens.join(' ');
     return Object.keys(result).length ? result : null;
   }
 
@@ -9610,70 +9404,9 @@
     return constructorToRgb(text) || value;
   }
 
-  const CONSTRUCTOR_SUPPORTED_TRANSITION_PROPERTIES = new Set([
-    'none', 'all', 'opacity', 'color', 'margin', 'padding', 'border', 'transform',
-    'background-color', 'background-position', 'text-shadow', 'box-shadow', 'width', 'height',
-    'border-radius', 'border-color', 'border-width', 'font-size', 'line-height',
-    'top', 'right', 'bottom', 'left',
-    'margin-top', 'margin-bottom', 'margin-left', 'margin-right',
-    'padding-top', 'padding-bottom', 'padding-left', 'padding-right'
-  ]);
-
-  function expandConstructorTransitionShorthand(value) {
-    const parts = String(value).split(',').map(s => s.trim());
-    const props = [], durs = [], timings = [], delays = [];
-    const timingEnums = CONSTRUCTOR_SUPPORTED_ENUMS['transition-timing-function'];
-    
-    for (const part of parts) {
-      const tokens = part.split(/\s+/);
-      let property = 'all';
-      let duration = '0ms';
-      let timing = 'ease';
-      let delay = '0ms';
-      
-      let timeCount = 0;
-      for (const token of tokens) {
-        const timeMatch = token.match(/^(-?\d*\.?\d+)(s|ms)$/i);
-        if (timeMatch) {
-          let ms = Number(timeMatch[1]);
-          if (timeMatch[2].toLowerCase() === 's') ms *= 1000;
-          const timeStr = `${ms}ms`;
-          if (timeCount === 0) {
-            duration = timeStr;
-            timeCount++;
-          } else {
-            delay = timeStr;
-          }
-        } else if (timingEnums && timingEnums.has(token)) {
-          timing = token;
-        } else {
-          if (token.toLowerCase() === 'background') property = 'background-color';
-          else property = token;
-        }
-      }
-      
-      if (!CONSTRUCTOR_SUPPORTED_TRANSITION_PROPERTIES.has(property)) {
-        return null;
-      }
-      
-      props.push(property);
-      durs.push(duration);
-      timings.push(timing);
-      delays.push(delay);
-    }
-    
-    return {
-      'transition-property': props.join(', '),
-      'transition-duration': durs.join(', '),
-      'transition-timing-function': timings.join(', '),
-      'transition-delay': delays.join(', ')
-    };
-  }
-
   function normalizeConstructorStyleDeclaration(name, value) {
     const shorthand = expandConstructorBoxShorthand(name, value)
       || (name === 'border-radius' ? expandConstructorBorderRadius(value) : null)
-      || (name === 'transition' ? expandConstructorTransitionShorthand(value) : null)
       || expandConstructorBorderPartShorthand(name, value)
       || expandConstructorBorderShorthand(name, value)
       || expandConstructorExtraShorthand(name, value);
@@ -9684,9 +9417,6 @@
       if (!nextName || rawValue === undefined || rawValue === null || rawValue === '') return;
       let nextValue = normalizeConstructorLengthValue(nextName, rawValue);
       nextValue = normalizeConstructorColorValue(nextName, nextValue);
-      if (typeof nextValue === 'string') {
-        nextValue = nextValue.replace(/(^|[\s,(])(-?)\.(\d+)/g, '$1$20.$3');
-      }
       if (shouldDropConstructorStyleValue(nextName, nextValue)) return;
       result[nextName] = nextValue;
     });
@@ -9706,87 +9436,19 @@
         result[nextName] = nextValue;
       });
     });
-    const expanded = expandConstructorGapStyles(result);
-    if (expanded.display && String(expanded.display).includes('inline') && expanded.width === undefined) {
-      expanded.width = 'auto';
-    }
-    const hasBgSettings = expanded['background-size'] || expanded['background-position'] || expanded['background-repeat'];
-    const bgImage = expanded['background-image'];
-    if (hasBgSettings && (!bgImage || bgImage === 'none')) {
-      expanded['background-image'] = 'url("/d/fgs16_image-placeholder2.png")';
-    }
-    return expanded;
+    return expandConstructorGapStyles(result);
   }
 
   function mergeStyleInputs(...values) {
     return expandConstructorGapStyles(Object.assign({}, ...values.map(normalizeStyleObject)));
   }
 
-  function splitCssByComma(value) {
-    const tokens = [];
-    let current = '';
-    let depth = 0;
-    let quote = '';
-    let escaped = false;
-    String(value || '').trim().split('').forEach((char) => {
-      if (escaped) {
-        current += char;
-        escaped = false;
-        return;
-      }
-      if (char === '\\') {
-        current += char;
-        escaped = true;
-        return;
-      }
-      if (quote) {
-        current += char;
-        if (char === quote) quote = '';
-        return;
-      }
-      if (char === '"' || char === "'") {
-        current += char;
-        quote = char;
-        return;
-      }
-      if (char === '(') depth += 1;
-      else if (char === ')' && depth > 0) depth -= 1;
-      if (char === ',' && depth === 0) {
-        if (current.trim()) tokens.push(current.trim());
-        current = '';
-        return;
-      }
-      current += char;
-    });
-    if (current.trim()) tokens.push(current.trim());
-    return tokens;
-  }
-
-  const CONSTRUCTOR_CUSTOM_VALUE_RE = /(?:calc|var|clamp|env|min|max|minmax|repeat|fit-content|cubic-bezier|steps)\(/i;
-
-  const CONSTRUCTOR_SUPPORTED_ENUMS = {
-    'mix-blend-mode': new Set(['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity']),
-    'border-style': new Set(['none', 'solid', 'dashed', 'dotted']),
-    'border-top-style': new Set(['none', 'solid', 'dashed', 'dotted']),
-    'border-right-style': new Set(['none', 'solid', 'dashed', 'dotted']),
-    'border-bottom-style': new Set(['none', 'solid', 'dashed', 'dotted']),
-    'border-left-style': new Set(['none', 'solid', 'dashed', 'dotted']),
-    'outline-style': new Set(['none', 'solid', 'dotted', 'dashed', 'double', 'groove', 'ridge', 'inset', 'outset']),
-    'cursor': new Set(['auto', 'default', 'pointer', 'text', 'vertical-text', 'move', 'grab', 'grabbing', 'crosshair', 'cell', 'copy', 'alias', 'context-menu', 'progress', 'wait', 'not-allowed', 'none', 'zoom-in', 'zoom-out', 'n-resize', 'e-resize', 's-resize', 'w-resize', 'ne-resize', 'nw-resize', 'se-resize', 'sw-resize', 'ew-resize', 'ns-resize', 'nesw-resize', 'nwse-resize', 'col-resize', 'row-resize']),
-    'background-clip': new Set(['content-box', 'padding-box', 'text', 'border-box']),
-    'white-space': new Set(['normal', 'nowrap', 'pre', 'pre-line', 'pre-wrap', 'break-spaces']),
-    'text-decoration-line': new Set(['none', 'underline', 'line-through']),
-    'text-transform': new Set(['none', 'uppercase', 'lowercase', 'capitalize']),
-    'transition-timing-function': new Set(['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'])
-  };
+  // Дефект 2.7: значения вида calc()/var()/clamp()/min()/max()/env() и грид-функции
+  // нельзя задать нативным свойством слоя — их нужно помечать как custom.
+  const CONSTRUCTOR_CUSTOM_VALUE_RE = /(?:calc|var|clamp|env|min|max|minmax|repeat|fit-content)\(/i;
 
   function constructorValueIsCustom(name, value) {
-    if (typeof name === 'string') {
-      if (name.startsWith('--')) return true;
-      if (/^(transition|box-shadow|text-shadow|filter|backdrop-filter|animation)$/i.test(name)) return true;
-      const enumSet = CONSTRUCTOR_SUPPORTED_ENUMS[name];
-      if (enumSet && !enumSet.has(String(value).trim().toLowerCase())) return true;
-    }
+    if (typeof name === 'string' && name.startsWith('--')) return true;
     const text = String(value == null ? '' : value);
     return CONSTRUCTOR_CUSTOM_VALUE_RE.test(text);
   }
@@ -9800,10 +9462,6 @@
       serializeValue: cssValue
     };
     if (typeof cssValue === 'string') {
-      if (name === 'grid-template-columns' || name === 'grid-template-rows') {
-        rule.isCustom = false;
-        rule.items = cssValue === 'none' ? [] : splitCssFunctionAwareList(cssValue).map((tok) => ({ value: tok }));
-      }
       if (CONSTRUCTOR_LENGTH_STYLE_PROPERTIES.has(name) && cssValue === '0') {
         rule.number = 0;
         rule.unit = 'px';
@@ -9816,290 +9474,6 @@
       if (match) {
         rule.number = Number(match[1]);
         rule.unit = match[2];
-      } else {
-        const unitlessMatch = cssValue.match(/^(-?\d+(?:\.\d+)?)$/);
-        if (unitlessMatch) {
-          rule.number = Number(unitlessMatch[1]);
-          rule.unit = '';
-        }
-      }
-      if (name === 'background-image') {
-        if (cssValue === 'none') {
-          rule.isCustom = false;
-          rule.disabled = true;
-          rule.value = 'transparent';
-          rule.serializeValue = 'transparent';
-        } else if (/url\(/i.test(cssValue)) {
-          rule.isCustom = false;
-          rule.value = 'url("/d/fgs16_image-placeholder2.png")';
-          rule.serializeValue = 'url("/d/fgs16_image-placeholder2.png")';
-          rule.items = [
-            {
-              kind: 'image',
-              src: '/d/fgs16_image-placeholder2.png',
-              disabled: false
-            }
-          ];
-        }
-      }
-      if (name === 'background-size') {
-        rule.isCustom = false;
-        rule.items = [{ value: cssValue }];
-      }
-      if (name === 'background-repeat') {
-        rule.isCustom = false;
-        rule.items = [{
-          repeatX: cssValue === 'repeat' || cssValue === 'repeat-x',
-          repeatY: cssValue === 'repeat' || cssValue === 'repeat-y'
-        }];
-      }
-      if (name === 'background-position') {
-        rule.isCustom = false;
-        const tokens = cssValue.split(/\s+/);
-        rule.items = [{
-          positionX: tokens[0] || 'center',
-          positionY: tokens.length > 1 ? tokens[1] : 'center',
-          offsetX: '0%',
-          offsetY: '0%'
-        }];
-      }
-      if (name === 'box-shadow' || name === 'text-shadow') {
-        if (cssValue === 'none') {
-          rule.isCustom = false;
-          rule.items = [];
-        } else {
-          try {
-            const parts = splitCssByComma(cssValue);
-            const parsedItems = [];
-            for (const part of parts) {
-              const tokens = splitCssFunctionAwareList(part);
-              let inset = false;
-              let color = 'rgba(0, 0, 0, 1)';
-              const lengths = [];
-              
-              for (const token of tokens) {
-                if (token.toLowerCase() === 'inset') {
-                  inset = true;
-                } else if (/^-?\d*\.?\d+(px|em|rem|vh|vw|vmin|vmax|%)?$/i.test(token) || token === '0') {
-                  lengths.push(token);
-                } else {
-                  color = token;
-                }
-              }
-              
-              if (lengths.length < 2) throw new Error('Invalid shadow');
-              
-              const parseLen = (idx) => {
-                const val = lengths[idx] || '0px';
-                const match = String(val).match(/^(-?\d+(?:\.\d+)?)(.*)$/i);
-                if (match) {
-                  return { number: Number(match[1]) || 0, unit: match[2] || 'px' };
-                }
-                return { number: Number(val) || 0, unit: 'px' };
-              };
-              
-              const xObj = parseLen(0);
-              const yObj = parseLen(1);
-              const blurObj = parseLen(2);
-              const spreadObj = parseLen(3);
-              
-              const item = {
-                color: color,
-                x: xObj.number,
-                xUnit: xObj.unit || 'px',
-                y: yObj.number,
-                yUnit: yObj.unit || 'px',
-                blur: Math.abs(blurObj.number),
-                blurUnit: blurObj.unit || 'px',
-                disabled: false
-              };
-              if (name === 'box-shadow') {
-                item.spread = spreadObj.number;
-                item.spreadUnit = spreadObj.unit || 'px';
-                item.inset = inset;
-              }
-              parsedItems.push(item);
-            }
-            rule.isCustom = false;
-            rule.items = parsedItems;
-          } catch (e) {
-            rule.isCustom = true;
-          }
-        }
-      }
-      if (name === 'transform') {
-        if (cssValue === 'none') {
-          rule.isCustom = false;
-          rule.items = [];
-        } else {
-          try {
-            const regex = /([a-z0-9A-Z\-]+)\(([^)]+)\)/g;
-            let match;
-            const itemsMap = {
-              move: { type: 'move', x: 0, xUnit: 'px', y: 0, yUnit: 'px', z: 0, zUnit: 'px', disabled: false },
-              scale: { type: 'scale', x: 1, xUnit: '', y: 1, yUnit: '', z: 1, zUnit: '', disabled: false },
-              rotate: { type: 'rotate', x: 0, xUnit: 'deg', y: 0, yUnit: 'deg', z: 0, zUnit: 'deg', disabled: false },
-              skew: { type: 'skew', x: 0, xUnit: 'deg', y: 0, yUnit: 'deg', z: 0, zUnit: 'deg', disabled: false }
-            };
-            let hasMatch = false;
-
-            while ((match = regex.exec(cssValue)) !== null) {
-              hasMatch = true;
-              const func = match[1].toLowerCase();
-              const argsStr = match[2];
-              const args = splitCssByComma(argsStr).map(arg => arg.trim());
-              
-              const parseArg = (str) => {
-                const m = String(str || '').match(/^(-?\d+(?:\.\d+)?)(.*)$/i);
-                if (m) return { number: Number(m[1]), unit: m[2] };
-                return { number: 0, unit: '' };
-              };
-
-              if (func.startsWith('translate')) {
-                const item = itemsMap.move;
-                if (func === 'translatex' && args[0]) {
-                  const arg = parseArg(args[0]); item.x = arg.number; item.xUnit = arg.unit || 'px';
-                } else if (func === 'translatey' && args[0]) {
-                  const arg = parseArg(args[0]); item.y = arg.number; item.yUnit = arg.unit || 'px';
-                } else if (func === 'translatez' && args[0]) {
-                  const arg = parseArg(args[0]); item.z = arg.number; item.zUnit = arg.unit || 'px';
-                } else if (func === 'translate' || func === 'translate3d') {
-                  if (args[0]) { const arg = parseArg(args[0]); item.x = arg.number; item.xUnit = arg.unit || 'px'; }
-                  if (args[1]) { const arg = parseArg(args[1]); item.y = arg.number; item.yUnit = arg.unit || 'px'; }
-                  if (args[2]) { const arg = parseArg(args[2]); item.z = arg.number; item.zUnit = arg.unit || 'px'; }
-                }
-              } else if (func.startsWith('scale')) {
-                const item = itemsMap.scale;
-                if (func === 'scalex' && args[0]) {
-                  item.x = Number(args[0]) || 0;
-                } else if (func === 'scaley' && args[0]) {
-                  item.y = Number(args[0]) || 0;
-                } else if (func === 'scalez' && args[0]) {
-                  item.z = Number(args[0]) || 0;
-                } else if (func === 'scale' || func === 'scale3d') {
-                  if (args[0]) item.x = Number(args[0]) || 0;
-                  if (args.length === 1) item.y = item.x;
-                  else if (args[1]) item.y = Number(args[1]) || 0;
-                  if (args[2]) item.z = Number(args[2]) || 0;
-                }
-              } else if (func.startsWith('rotate')) {
-                const item = itemsMap.rotate;
-                if (func === 'rotatex' && args[0]) {
-                  const arg = parseArg(args[0]); item.x = arg.number; item.xUnit = arg.unit || 'deg';
-                } else if (func === 'rotatey' && args[0]) {
-                  const arg = parseArg(args[0]); item.y = arg.number; item.yUnit = arg.unit || 'deg';
-                } else if (func === 'rotate' || func === 'rotatez') {
-                  if (args[0]) { const arg = parseArg(args[0]); item.z = arg.number; item.zUnit = arg.unit || 'deg'; }
-                } else if (func === 'rotate3d') {
-                  throw new Error('rotate3d not supported');
-                }
-              } else if (func.startsWith('skew')) {
-                const item = itemsMap.skew;
-                if (func === 'skewx' && args[0]) {
-                  const arg = parseArg(args[0]); item.x = arg.number; item.xUnit = arg.unit || 'deg';
-                } else if (func === 'skewy' && args[0]) {
-                  const arg = parseArg(args[0]); item.y = arg.number; item.yUnit = arg.unit || 'deg';
-                } else if (func === 'skew') {
-                  if (args[0]) { const arg = parseArg(args[0]); item.x = arg.number; item.xUnit = arg.unit || 'deg'; }
-                  if (args[1]) { const arg = parseArg(args[1]); item.y = arg.number; item.yUnit = arg.unit || 'deg'; }
-                }
-              } else {
-                throw new Error('Unsupported transform function');
-              }
-            }
-
-            if (!hasMatch && cssValue.trim() !== '') throw new Error('Invalid transform');
-
-            rule.items = [];
-            if (itemsMap.move.x !== 0 || itemsMap.move.y !== 0 || itemsMap.move.z !== 0) rule.items.push(itemsMap.move);
-            if (itemsMap.scale.x !== 1 || itemsMap.scale.y !== 1 || itemsMap.scale.z !== 1) rule.items.push(itemsMap.scale);
-            if (itemsMap.rotate.x !== 0 || itemsMap.rotate.y !== 0 || itemsMap.rotate.z !== 0) rule.items.push(itemsMap.rotate);
-            if (itemsMap.skew.x !== 0 || itemsMap.skew.y !== 0) rule.items.push(itemsMap.skew);
-
-            rule.isCustom = false;
-          } catch (e) {
-            rule.isCustom = true;
-          }
-        }
-      }
-      if (name === 'filter' || name === 'backdrop-filter') {
-        if (cssValue === 'none') {
-          rule.isCustom = false;
-          rule.items = [];
-        } else {
-          try {
-            const regex = /([a-z\-]+)\(([^)]+)\)/gi;
-            let match;
-            const parsedItems = [];
-            let hasMatch = false;
-
-            while ((match = regex.exec(cssValue)) !== null) {
-              hasMatch = true;
-              const type = match[1].toLowerCase();
-              const argsStr = match[2].trim();
-              
-              if (type === 'drop-shadow') {
-                const tokens = splitCssFunctionAwareList(argsStr);
-                let color = 'rgba(0, 0, 0, 1)';
-                const lengths = [];
-                for (const t of tokens) {
-                   if (/^-?\d*\.?\d+(px|em|rem|vh|vw|vmin|vmax|%)?$/i.test(t) || t === '0') {
-                      lengths.push(t);
-                   } else {
-                      color = t;
-                   }
-                }
-                parsedItems.push({
-                   type: 'drop-shadow',
-                   x: lengths[0] || '0px',
-                   y: lengths[1] || '0px',
-                   blur: lengths[2] || '0px',
-                   color: color,
-                   disabled: false
-                });
-                continue;
-              }
-
-              if (name === 'filter') {
-                 const m = argsStr.match(/^(-?\d+(?:\.\d+)?)(.*)$/i);
-                 parsedItems.push({
-                    type: type,
-                    amount: m ? m[1] : '0',
-                    unit: m && m[2] ? m[2] : (type === 'blur' ? 'px' : (type === 'hue-rotate' ? 'deg' : '%')),
-                    disabled: false
-                 });
-              } else {
-                 parsedItems.push({
-                    type: type,
-                    value: argsStr,
-                    disabled: false
-                 });
-              }
-            }
-            if (!hasMatch) throw new Error('Invalid filter');
-            rule.isCustom = false;
-            rule.items = parsedItems;
-          } catch (e) {
-            rule.isCustom = true;
-          }
-        }
-      }
-      if (name.startsWith('transition-')) {
-        rule.isCustom = false;
-        rule.items = cssValue.split(',').map(v => {
-          const val = v.trim();
-          if (name === 'transition-property') return { value: val, disabled: false };
-          if (name === 'transition-timing-function') return { value: val };
-          if (name === 'transition-duration' || name === 'transition-delay') {
-            const timeMatch = val.match(/^(-?\d*\.?\d+)(ms|s)$/i);
-            if (timeMatch) {
-              let ms = Number(timeMatch[1]);
-              if (timeMatch[2].toLowerCase() === 's') ms *= 1000;
-              return { number: ms, unit: 'ms' };
-            }
-            return { number: 0, unit: 'ms' };
-          }
-        });
       }
     }
     return rule;
@@ -10171,17 +9545,11 @@
     if (!Object.keys(rules).length) return;
     const normalizedMedia = normalizeConstructorMedia(media);
     const key = `${normalizedMedia}/${selectorText}`;
-    if (!map[key]) {
-      map[key] = { media: normalizedMedia, selectorText, rules };
-    } else {
+    if (map[key]) {
       map[key].rules = Object.assign({}, map[key].rules || {}, rules);
+      return;
     }
-    const customNames = Object.keys(map[key].rules).filter((k) => map[key].rules[k].isCustom);
-    if (customNames.length) {
-      map[key].custom = customNames;
-    } else {
-      delete map[key].custom;
-    }
+    map[key] = { media: normalizedMedia, selectorText, rules };
   }
 
   function addConstructorSystemClassStyle(ctx, className) {
@@ -10343,10 +9711,9 @@
   }
 
   function constructorStylesForTag(tag, styles, fallbackColor = '') {
-    const result = isConstructorSvgIconTag(tag)
+    return isConstructorSvgIconTag(tag)
       ? normalizeConstructorSvgIconStyles(styles, fallbackColor)
-      : Object.assign({}, styles);
-    return result;
+      : styles;
   }
 
   function normalizeConstructorSvgMarkup(value) {
@@ -10365,12 +9732,6 @@
       const width = Number(String(normalized.getAttribute('width') || '').replace(/[^\d.]/g, ''));
       const height = Number(String(normalized.getAttribute('height') || '').replace(/[^\d.]/g, ''));
       normalized.setAttribute('viewBox', `0 0 ${width || 24} ${height || 24}`);
-    }
-    normalized.setAttribute('width', '100%');
-    normalized.setAttribute('height', '100%');
-    if (normalized.style) {
-      normalized.style.width = '';
-      normalized.style.height = '';
     }
 
     const children = Array.from(normalized.querySelectorAll('*'));
@@ -10578,21 +9939,6 @@
     return '';
   }
 
-  const CONSTRUCTOR_CSS_TARGET_TAGS = new Set([
-    'a', 'button', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'td', 'th',
-    'video', 'audio', 'img', 'svg', 'section', 'header', 'footer', 'nav',
-    'article', 'aside', 'main', 'form', 'input', 'textarea', 'select',
-    'label', 'strong', 'em', 'small', 'blockquote', 'pre', 'code',
-    'figure', 'figcaption', 'details', 'summary', 'dialog', 'iframe'
-  ]);
-
-  function normalizeConstructorCssTargetTag(value) {
-    const tag = String(value || '').trim().toLowerCase();
-    if (!/^[a-z][a-z0-9-]*$/.test(tag)) return '';
-    return CONSTRUCTOR_CSS_TARGET_TAGS.has(tag) ? tag : '';
-  }
-
   function constructorNodeSourceTag(node) {
     const explicitTag = normalizeConstructorSourceTag(
       node?.sourceTag || node?.sourceTagName || node?.tagName || node?.htmlTag || node?.tag || node?.element
@@ -10610,7 +9956,7 @@
       if (normalized && !tokens.includes(normalized)) tokens.push(normalized);
       return '';
     });
-    if (!tokens.length && /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(source) && !normalizeConstructorCssTargetTag(source)) {
+    if (!tokens.length && /^[a-zA-Z_-][a-zA-Z0-9_-]*$/.test(source) && !normalizeConstructorSourceTag(source)) {
       const normalized = sanitizeConstructorClassName(source);
       if (normalized) tokens.push(normalized);
     }
@@ -10631,7 +9977,7 @@
       .split(/\s+/)
       .map((part) => part.trim())
       .filter(Boolean)[0] || '';
-    return normalizeConstructorCssTargetTag(tag);
+    return normalizeConstructorSourceTag(tag);
   }
 
   function normalizeConstructorClassStyleSelector(value) {
@@ -10648,18 +9994,10 @@
     const className = classParts.length > 1
       ? classParts[0] + '__' + classParts.slice(1).join('__')
       : classParts[0];
-
-    let pseudo = '';
-    const pseudoMatch = source.match(/:(hover|active|focus)$/i);
-    if (pseudoMatch) {
-      pseudo = pseudoMatch[0].toLowerCase();
-    }
-
     return {
       className: sanitizeConstructorClassName(className),
       sourceClasses,
-      targetTag,
-      pseudo
+      targetTag
     };
   }
 
@@ -10701,7 +10039,7 @@
   function addConstructorClassStyles(ctx, media, value) {
     classStyleEntries(value).forEach(({ className, sourceClasses, targetTag, styles }) => {
       const normalizedSourceClasses = (sourceClasses || []).map(ctx.stripClassPrefix).filter(Boolean);
-      const normalizedTargetTag = normalizeConstructorCssTargetTag(targetTag);
+      const normalizedTargetTag = normalizeConstructorSourceTag(targetTag);
       const targetTags = constructorSourceSelectorTargetTags(ctx, {
         sourceClasses: normalizedSourceClasses,
         targetTag: normalizedTargetTag
@@ -10821,16 +10159,7 @@
 
   function replaceConstructorCssSelectorByRules(selectorText, replaceRules) {
     let next = String(selectorText || '').trim();
-    if (!next) return next;
-
-    next = next.replace(/#([a-zA-Z][a-zA-Z0-9_-]*)/g, '[data-id="$1"]');
-
-    const SYSTEM_TAGS = ['span', 'strong', 'em', 'b', 'i', 'small', 'label', 'svg'];
-    SYSTEM_TAGS.forEach((tag) => {
-      next = replaceConstructorCssTypeSelector(next, tag, `.tth-${tag}`);
-    });
-
-    if (!replaceRules?.length) return next;
+    if (!next || !replaceRules?.length) return next;
 
     replaceRules.forEach((rule) => {
       if (!rule?.from || !rule?.to) return;
@@ -10876,16 +10205,13 @@
           options.embedCss.push(`${selector} {\n${body}\n}`);
         }
       } else if (selector && !body.includes('{')) {
-        const resolvedBody = resolveCssVarReferences(body, options.rootVars);
-        const styles = parseStyleDeclarations(resolvedBody);
+        const styles = parseStyleDeclarations(body);
         if (Object.keys(styles).length) {
           splitConstructorCssSelectors(selector).forEach((item) => {
             const selectorText = replaceConstructorCssSelectorByRules(item.trim(), replaceRules);
             const isRootPseudo = selectorText.toLowerCase() === ':root';
-            const isNativePseudo = /:(hover|active|focus)$/i.test(selectorText);
-            
-            if (!isRootPseudo && !isNativePseudo && (selectorText.includes(':') || selectorText.includes('::'))) {
-              // Дефект 2.1: псевдоклассы/псевдоэлементы (::before, :nth-child...) слоями не выразить —
+            if (!isRootPseudo && (selectorText.includes(':') || selectorText.includes('::'))) {
+              // Дефект 2.1: псевдоклассы/псевдоэлементы (:hover, ::before...) слоями не выразить —
               // переносим правило в Embed с сохранением исходных деклараций, а не удаляем.
               if (Array.isArray(options.embedCss)) {
                 const mediaText = (typeof media === 'string' && /^@media/i.test(media.trim())) ? media.trim() : '';
@@ -10894,39 +10220,7 @@
               }
               return;
             }
-
-            const isComplexSelector = selectorText.includes(' ') || selectorText.includes('>') || selectorText.includes('+') || selectorText.includes('~') || (selectorText.match(/\./g) || []).length > 1 || (selectorText.match(/#/g) || []).length > 1;
-            
-            if (isComplexSelector && !isRootPseudo) {
-              if (Array.isArray(options.embedCss)) {
-                const mediaText = (typeof media === 'string' && /^@media/i.test(media.trim())) ? media.trim() : '';
-                const ruleText = `${selectorText} {\n${body}\n}`;
-                options.embedCss.push(mediaText ? `${mediaText} {\n${ruleText}\n}` : ruleText);
-              }
-              return;
-            }
-            
-            const nativeStyles = {};
-            const embedStyles = {};
-            
-            Object.entries(styles).forEach(([name, value]) => {
-              if (name.startsWith('--') || CONSTRUCTOR_TAPTOP_CUSTOM_PROPERTIES.has(name)) {
-                nativeStyles[name] = value;
-              } else {
-                embedStyles[name] = value;
-              }
-            });
-            
-            if (Object.keys(embedStyles).length > 0 && Array.isArray(options.embedCss)) {
-              const mediaText = (typeof media === 'string' && /^@media/i.test(media.trim())) ? media.trim() : '';
-              const embedRulesStr = Object.entries(embedStyles).map(([k, v]) => `  ${k}: ${v};`).join('\n');
-              const ruleText = `${selectorText} {\n${embedRulesStr}\n}`;
-              options.embedCss.push(mediaText ? `${mediaText} {\n${ruleText}\n}` : ruleText);
-            }
-            
-            if (Object.keys(nativeStyles).length > 0) {
-              result.push({ media, selector: selectorText, styles: nativeStyles });
-            }
+            result.push({ media, selector: selectorText, styles });
           });
         }
       }
@@ -10986,7 +10280,7 @@
   }
 
   function tagHasSourceTag(ctx, tagId, tagName) {
-    const normalizedTag = normalizeConstructorCssTargetTag(tagName);
+    const normalizedTag = normalizeConstructorSourceTag(tagName);
     return !!normalizedTag && ctx.tagSourceTags.get(tagId) === normalizedTag;
   }
 
@@ -11003,7 +10297,7 @@
   }
 
   function constructorHasTaggedSourceTarget(ctx, sourceClasses, targetTag) {
-    const normalizedTargetTag = normalizeConstructorCssTargetTag(targetTag);
+    const normalizedTargetTag = normalizeConstructorSourceTag(targetTag);
     if (!normalizedTargetTag) return false;
     return Object.values(ctx.tags || {}).some((tag) => (
       tag?.id
@@ -11055,7 +10349,7 @@
     if (selector.targetTag) {
       const targets = constructorSourceSelectorTargetTags(ctx, selector);
       targets.forEach((tag) => {
-        addConstructorSelector(ctx.designSelectors, rule.media, constructorUniqueSelector(tag) + (selector.pseudo || ''), constructorStylesForTag(tag, rule.styles));
+        addConstructorSelector(ctx.designSelectors, rule.media, constructorUniqueSelector(tag), constructorStylesForTag(tag, rule.styles));
       });
       return !!targets.length;
     }
@@ -11068,57 +10362,20 @@
     const styles = targetTags.some(isConstructorSvgIconTag)
       ? normalizeConstructorSvgIconStyles(rule.styles)
       : rule.styles;
-      
     ctx.ensureClass(finalClassName);
-    addConstructorSelector(ctx.mainSelectors, rule.media, `.${finalClassName}${selector.pseudo || ''}`, styles);
+    addConstructorSelector(ctx.mainSelectors, rule.media, `.${finalClassName}`, styles);
     return true;
   }
 
   function addConstructorSourceCssClassStyles(ctx, cssSource, options = {}) {
     const isRootSelector = constructorSourceCssRootMatcher(ctx, options);
     const replaceRules = activeBuilderReplaceRules(options);
-    const rootVars = parseRootCssVariables(cssSource);
-    Object.assign(ctx.rootVars, rootVars);
     extractConstructorStyleBlocks(cssSource).forEach((block) => {
-      parseConstructorCssRules(block, 'screen', [], { replaceRules, embedCss: ctx.embedCssRules, rootVars }).forEach((rule) => {
+      parseConstructorCssRules(block, 'screen', [], { replaceRules, embedCss: ctx.embedCssRules }).forEach((rule) => {
         if (isRootSelector(rule.selector) && addConstructorRootStyles(ctx, rule.media, rule.styles)) return;
         addConstructorSourceCssRuleStyles(ctx, rule);
       });
     });
-  }
-
-  function parseRootCssVariables(cssText) {
-    const vars = {};
-    const text = String(cssText || '');
-    const rootMatch = text.match(/:root\s*\{([^}]*)\}/i);
-    if (!rootMatch) return vars;
-    splitTopLevelDeclarations(rootMatch[1]).forEach((decl) => {
-      const split = splitDeclarationNameValue(decl);
-      if (!split) return;
-      const name = split.name.trim();
-      if (name.startsWith('--')) {
-        vars[name] = split.value.trim();
-      }
-    });
-    return vars;
-  }
-
-  function resolveCssVarReferences(value, variables) {
-    if (!variables || !Object.keys(variables).length) return value;
-    let result = String(value || '');
-    const seen = new Set();
-    const VAR_RE = /var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/gi;
-    for (let i = 0; i < 5; i++) {
-      const prev = result;
-      result = result.replace(VAR_RE, (match, name, fallback) => {
-        const resolved = variables[name];
-        if (resolved !== undefined) return resolved;
-        return fallback ? fallback.trim() : match;
-      });
-      if (result === prev || seen.has(result)) break;
-      seen.add(result);
-    }
-    return result;
   }
 
   function addConstructorTagClass(ctx, tag, className) {
@@ -11327,7 +10584,6 @@
       mainSelectors: {},
       designSelectors: {},
       embedCssRules: [],
-      rootVars: {},
       layerCount: 0,
       embedCount: 0
     };
@@ -11358,23 +10614,11 @@
     return `.${constructorUniqueClassName(tag)}`;
   }
 
-  function resolveCssVarInStyleObject(obj, variables) {
-    if (!variables || !Object.keys(variables).length || !obj) return obj;
-    if (typeof obj === 'string') return resolveCssVarReferences(obj, variables);
-    if (!isPlainObject(obj)) return obj;
-    const result = {};
-    Object.entries(obj).forEach(([key, value]) => {
-      result[key] = typeof value === 'string' ? resolveCssVarReferences(value, variables) : value;
-    });
-    return result;
-  }
-
   function addConstructorLayerStyles(ctx, tag, node) {
     const rawSvgColor = isConstructorSvgIconTag(tag) ? extractConstructorSvgIconColor(constructorSvgValue(node)) : '';
-    const vars = ctx.rootVars;
     const styles = constructorStylesForTag(
       tag,
-      mergeStyleInputs(resolveCssVarInStyleObject(node?.styles, vars), resolveCssVarInStyleObject(node?.style, vars), resolveCssVarInStyleObject(node?.css, vars)),
+      mergeStyleInputs(node?.styles, node?.style, node?.css),
       rawSvgColor
     );
     addConstructorSelector(ctx.designSelectors, 'screen', constructorUniqueSelector(tag), styles);
@@ -11388,7 +10632,7 @@
           : null;
     if (mediaStyles) {
       Object.entries(mediaStyles).forEach(([media, mediaStyle]) => {
-        addConstructorSelector(ctx.designSelectors, media, constructorUniqueSelector(tag), constructorStylesForTag(tag, normalizeStyleObject(resolveCssVarInStyleObject(mediaStyle, vars))));
+        addConstructorSelector(ctx.designSelectors, media, constructorUniqueSelector(tag), constructorStylesForTag(tag, normalizeStyleObject(mediaStyle)));
       });
     }
 
@@ -11432,18 +10676,6 @@
       uniqueClassId
     ];
     const nodeClasses = constructorNodeClasses(node);
-    const isEmptyNode = (!node.children || !node.children.length) && !node.html && !node.text && !node.embedCode;
-    if (isEmptyNode && (sourceTag === 'span' || sourceTag === 'div' || type === 'div')) {
-      addConstructorSystemClassStyle(ctx, 'tth-empty');
-      const tthEmptyId = ctx.ensureClass('tth-empty', { system: true });
-      if (tthEmptyId && !classNameIds.includes(tthEmptyId)) classNameIds.push(tthEmptyId);
-    }
-    const SYSTEM_TAGS = new Set(['span', 'strong', 'em', 'b', 'i', 'small', 'label']);
-    if (SYSTEM_TAGS.has(sourceTag)) {
-      addConstructorSystemClassStyle(ctx, `tth-${sourceTag}`);
-      const tthTagId = ctx.ensureClass(`tth-${sourceTag}`, { system: true });
-      if (tthTagId && !classNameIds.includes(tthTagId)) classNameIds.push(tthTagId);
-    }
     nodeClasses.forEach((className) => {
       const idValue = ctx.ensureClass(className);
       if (idValue && !classNameIds.includes(idValue)) classNameIds.push(idValue);
@@ -11465,20 +10697,16 @@
     if (sourceTag) ctx.tagSourceTags.set(id, sourceTag);
     addConstructorReplacementClasses(ctx, tag, sourceTag);
     if (parentId) tag.parent = parentId;
-    const layerName = (type === 'embed' && nodeClasses.includes('helper--d-none'))
+    const layerName = type === 'embed' && nodeClasses.includes('helper--d-none')
       ? 'script'
-      : node.name || nodeClasses[0] || sourceTag || baseClass;
+      : nodeClasses[0] || sourceTag || baseClass;
     tag.name = sanitizeTaptopName(layerName, baseClass);
     return tag;
   }
 
   function imageValueFromConstructorSource(src, ctx) {
-    let source = String(src || '/d/fgs16_image-placeholder2.png').trim() || '/d/fgs16_image-placeholder2.png';
-    const isHttpExternalSource = /^https?:\/\//i.test(source) || /^\/\//.test(source);
-    if (isHttpExternalSource) {
-      source = '/d/fgs16_image-placeholder2.png';
-    }
-    const isExternalSource = isHttpExternalSource || /^data:image\//i.test(source);
+    const source = String(src || '/d/fgs16_image-placeholder2.png').trim() || '/d/fgs16_image-placeholder2.png';
+    const isExternalSource = /^https?:\/\//i.test(source) || /^\/\//.test(source) || /^data:image\//i.test(source);
     const ext = parseDataImageUrl(source)?.mimeType
       ? imageExtFromMime(parseDataImageUrl(source).mimeType)
       : (source.match(/\.([a-z0-9]+)(?:[?#]|$)/i)?.[1] || 'png').toLowerCase();
@@ -11658,34 +10886,6 @@
         }
       };
       tag.dataSource = 'from_parent';
-    } else if (type === 'button') {
-      tag.widgetName = 'tt_link_button';
-      tag.widgetSettings = { screen: { type: 'button' } };
-      tag.type = 'tt_link_button';
-      tag.attr = { role: 'button' };
-      tag.prevent = ['ATTR_HREF'];
-      tag.can = ['SELECT', 'INSERT'];
-      tag.data = {
-        href: makeConstructorDataValue(constructorHrefValue(node)),
-        'data-action-element': makeConstructorDataValue('')
-      };
-      tag.dataSource = 'from_parent';
-      const buttonText = constructorTextValue(node);
-      if (buttonText) {
-        const textButtonId = buildConstructorTextLayer(ctx, { type: 'text', tag: 'span', html: buttonText }, tag.id);
-        if (textButtonId) {
-          const textButtonTag = ctx.tags[textButtonId];
-          if (textButtonTag) {
-            textButtonTag.className = 'text-button';
-            ctx.tagSourceClasses.set(textButtonId, 'text-button');
-          }
-          tag.children = (tag.children || []).concat(textButtonId);
-        }
-      }
-      const childIds = asArray(node.children || node.layers || node.items)
-        .map((child) => buildConstructorLayer(ctx, child, tag.id))
-        .filter(Boolean);
-      if (childIds.length) tag.children = (tag.children || []).concat(childIds);
     } else if (type === 'link') {
       tag.widgetName = 'tt_link_universal';
       tag.widgetSettings = {
@@ -11715,37 +10915,10 @@
       tag.tagName = 'span';
       tag.alias = 'svg icon';
       tag.can = ['SELECT', 'SET_ATTR_SRC_SVG'];
-      const rawSvgValue = constructorSvgValue(node);
-      const tempSvg = findConstructorSvgElement(rawSvgValue);
-      node.styles = node.styles || {};
-      
-      const aiW = node.styles.width || node.style?.width || node.css?.width;
-      const aiH = node.styles.height || node.style?.height || node.css?.height;
-      let w = '';
-      let h = '';
-      if (tempSvg) {
-        w = String(tempSvg.getAttribute('width') || tempSvg.style?.width || '').trim();
-        h = String(tempSvg.getAttribute('height') || tempSvg.style?.height || '').trim();
-        
-        if ((!w || w === '100%') && (!h || h === '100%') && tempSvg.hasAttribute('viewBox')) {
-          const vb = tempSvg.getAttribute('viewBox').trim().split(/\s+/);
-          if (vb.length === 4) {
-            w = vb[2] + 'px';
-            h = vb[3] + 'px';
-          }
-        }
-      }
-      
-      const targetW = aiW || w;
-      if (targetW && targetW !== '100%') node.styles.width = targetW;
-      
-      const targetH = aiH || h;
-      if (targetH && targetH !== '100%') node.styles.height = targetH;
-
       tag.data = {
         text: {
           type: 'HTML',
-          value: normalizeConstructorSvgMarkup(rawSvgValue)
+          value: normalizeConstructorSvgMarkup(constructorSvgValue(node))
         }
       };
       tag.dataSource = 'from_parent';
@@ -11766,7 +10939,7 @@
       tag.widgetName = 'div';
       tag.type = 'div';
       const sourceTag = constructorNodeSourceTag(node);
-      if (sourceTag && sourceTag !== 'div' && sourceTag !== 'span') tag.tagName = sourceTag;
+      if (sourceTag && sourceTag !== 'div') tag.tagName = sourceTag;
       tag.alias = constructorAlias(type);
       tag.can = ['SELECT', 'INSERT'];
     }
@@ -11776,7 +10949,7 @@
     applyConstructorData(tag, node, new Set(['href', 'src', 'text', 'html', 'svg', 'svgBody', 'svg_body']));
     addConstructorLayerStyles(ctx, tag, node);
 
-    if (type !== 'text' && type !== 'embed' && type !== 'button') {
+    if (type !== 'text' && type !== 'embed') {
       const childIds = asArray(node.children || node.layers || node.items)
         .map((child) => buildConstructorLayer(ctx, child, tag.id))
         .filter(Boolean);
@@ -11803,19 +10976,8 @@
   }
 
   function wrapRawJsInCode(code) {
-    let text = String(code || '').trim();
+    const text = String(code || '').trim();
     if (!text) return '';
-
-    text = text.replace(/getElementById\((["'])([^"']+)\1\)/g, (match, quote, id) => {
-      const innerQuote = quote === '"' ? "'" : '"';
-      return `querySelector(${quote}[data-id=${innerQuote}${id}${innerQuote}]${quote})`;
-    });
-    text = text.replace(/querySelector(All)?\((["'])(.*?)\2\)/g, (match, all, quote, selector) => {
-      const innerQuote = quote === '"' ? "'" : '"';
-      const fixedSelector = selector.replace(/(^|\s|,|>|\+|~|:not\()#([a-zA-Z][a-zA-Z0-9_-]*)/g, `$1[data-id=${innerQuote}$2${innerQuote}]`);
-      return `querySelector${all || ''}(${quote}${fixedSelector}${quote})`;
-    });
-    text = text.replace(/\bis-/g, 'is_').replace(/\bhas-/g, 'has_');
 
     const tagRegex = /(<script\b[^>]*>[\s\S]*?<\/script>|<link\b[^>]*>|<style\b[^>]*>[\s\S]*?<\/style>|<!--[\s\S]*?-->)/i;
     const parts = text.split(tagRegex);
@@ -11865,11 +11027,7 @@
       const name = String(attr?.name || '').trim();
       if (!name || skip.has(name) || /^on/i.test(name)) return;
       if (name === 'class' || name === 'style') return;
-      if (name === 'id') {
-        attrs['data-id'] = attr.value;
-      } else {
-        attrs[name] = attr.value;
-      }
+      attrs[name] = attr.value;
     });
     return attrs;
   }
@@ -11925,19 +11083,6 @@
     const tag = String(element?.tagName || '').toLowerCase();
     if (!tag || /^(style|script|link|meta|title|noscript)$/i.test(tag)) return null;
 
-    if (tag === 'template') {
-      const node = localConstructorBaseNode(element, 'embed');
-      let htmlContent = element.outerHTML || '';
-      htmlContent = htmlContent.replace(/\bid=(["'])([^"']*)\1/g, 'data-id=$1$2$1');
-      node.embedCode = htmlContent;
-      node.name = 'template';
-      node.styles = Object.assign({}, node.styles || {}, { display: 'none' });
-      if (node.attrs && node.attrs['data-id']) {
-        delete node.attrs['data-id'];
-      }
-      return node;
-    }
-
     const className = String(element?.getAttribute?.('class') || '');
     const wrappedSvg = tag === 'svg' ? element : localConstructorDirectSvgChild(element);
     const isSvgIconWrapper = /\bsvg-icon\b/.test(className) && wrappedSvg;
@@ -11958,26 +11103,13 @@
       return node;
     }
 
-    if (/^(h[1-6]|p)$/i.test(tag)) {
+    if (/^(h[1-6]|p|span|small|strong|em|b|i|label)$/i.test(tag)) {
       const node = localConstructorBaseNode(element, 'text');
       node.html = String(element.innerHTML || element.textContent || '').trim();
       return node.html ? node : null;
     }
 
-    if (tag === 'button') {
-      const node = localConstructorBaseNode(element, 'button', new Set(['href', 'target']));
-      node.href = element.getAttribute?.('href') || '#';
-      node.blank = element.getAttribute?.('target') === '_blank';
-      const children = localConstructorChildren(element);
-      if (children.length) node.children = children;
-      else {
-        const textNode = localConstructorTextNode(element.textContent || '');
-        if (textNode) node.children = [textNode];
-      }
-      return node;
-    }
-
-    if (tag === 'a') {
+    if (tag === 'a' || tag === 'button') {
       const node = localConstructorBaseNode(element, 'link', new Set(['href', 'target']));
       node.href = element.getAttribute?.('href') || '#';
       node.blank = element.getAttribute?.('target') === '_blank';

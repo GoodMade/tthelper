@@ -1,0 +1,217 @@
+{
+  "type": "taptop-enhancer-layer-export",
+  "version": 1,
+  "exportedAt": "2026-06-14T10:55:19.250Z",
+  "sourceUrl": "",
+  "layerName": "svg",
+  "clipboardData": {
+    "verId": 9002495,
+    "designId": 81692316,
+    "copiedLayout": {
+      "tree": {
+        "version": "3.1.0",
+        "tags": {
+          "i7uhrf6qw": {
+            "id": "i7uhrf6qw",
+            "widgetName": "tt_svg_icon",
+            "type": "tt_svg_icon",
+            "tagName": "span",
+            "alias": "svg icon",
+            "className": "svg-icon",
+            "classNameIds": [
+              "class_i23bz602j",
+              "class_i8git1w2k",
+              "class_iivutawqw"
+            ],
+            "can": [
+              "SELECT",
+              "SET_ATTR_SRC_SVG"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"100%\" height=\"100%\"><path d=\"M4 12.5l5 5 11-11\"/></svg>"
+              },
+              "viewBox": {
+                "type": "STRING",
+                "value": "0 0 24 24"
+              },
+              "fill": {
+                "type": "STRING",
+                "value": "none"
+              },
+              "stroke": {
+                "type": "STRING",
+                "value": "currentColor"
+              },
+              "stroke-width": {
+                "type": "STRING",
+                "value": "2.4"
+              },
+              "stroke-linecap": {
+                "type": "STRING",
+                "value": "round"
+              },
+              "stroke-linejoin": {
+                "type": "STRING",
+                "value": "round"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "name": "svg"
+          }
+        },
+        "forms": {},
+        "root": "i7uhrf6qw",
+        "dataCollection": {
+          "map": {}
+        }
+      },
+      "mainSelectorCollection": {
+        "map": {
+          "screen/.svg-icon": {
+            "media": "screen",
+            "selectorText": ".svg-icon",
+            "rules": {
+              "position": {
+                "name": "position",
+                "value": "relative",
+                "isCustom": false,
+                "serializeValue": "relative"
+              },
+              "display": {
+                "name": "display",
+                "value": "inline-flex",
+                "isCustom": false,
+                "serializeValue": "inline-flex"
+              },
+              "justify-content": {
+                "name": "justify-content",
+                "value": "center",
+                "isCustom": false,
+                "serializeValue": "center"
+              },
+              "align-items": {
+                "name": "align-items",
+                "value": "center",
+                "isCustom": false,
+                "serializeValue": "center"
+              },
+              "height": {
+                "name": "height",
+                "value": "32px",
+                "isCustom": false,
+                "serializeValue": "32px",
+                "number": 32,
+                "unit": "px"
+              },
+              "width": {
+                "name": "width",
+                "value": "32px",
+                "isCustom": false,
+                "serializeValue": "32px",
+                "number": 32,
+                "unit": "px"
+              },
+              "overflow-x": {
+                "name": "overflow-x",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              },
+              "overflow-y": {
+                "name": "overflow-y",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              }
+            }
+          },
+          "screen/.svg-svg": {
+            "media": "screen",
+            "selectorText": ".svg-svg",
+            "rules": {}
+          }
+        }
+      },
+      "designSelectorCollection": {
+        "map": {
+          "screen/.svg-icon--u-i7uhrf6qw": {
+            "media": "screen",
+            "selectorText": ".svg-icon--u-i7uhrf6qw",
+            "rules": {
+              "width": {
+                "name": "width",
+                "value": "16px",
+                "isCustom": false,
+                "serializeValue": "16px",
+                "number": 16,
+                "unit": "px"
+              },
+              "height": {
+                "name": "height",
+                "value": "16px",
+                "isCustom": false,
+                "serializeValue": "16px",
+                "number": 16,
+                "unit": "px"
+              }
+            }
+          }
+        }
+      },
+      "cmSelectorCollection": {
+        "map": {}
+      },
+      "animationSelectorCollection": {
+        "map": {}
+      },
+      "mainClassNameCollection": {
+        "map": {
+          "class_i23bz602j": {
+            "id": "class_i23bz602j",
+            "value": "svg-icon"
+          },
+          "class_iivutawqw": {
+            "id": "class_iivutawqw",
+            "value": "svg-svg"
+          }
+        },
+        "countMap": {
+          "svg-icon": 1,
+          "svg-svg": 1
+        },
+        "sortMap": {
+          "class_i23bz602j": "class_iivutawqw",
+          "class_iivutawqw": ""
+        },
+        "head": {
+          "id": "class_i23bz602j",
+          "value": "svg-icon"
+        }
+      },
+      "designClassNameCollection": {
+        "map": {
+          "class_i8git1w2k": {
+            "id": "class_i8git1w2k",
+            "value": "svg-icon--u-i7uhrf6qw"
+          }
+        },
+        "countMap": {
+          "svg-icon--u-i7uhrf6qw": 1
+        },
+        "sortMap": {
+          "class_i8git1w2k": ""
+        },
+        "head": {
+          "id": "class_i8git1w2k",
+          "value": "svg-icon--u-i7uhrf6qw"
+        }
+      }
+    },
+    "action": "copy",
+    "tagID": "i7uhrf6qw_0",
+    "isElementInCollection": false
+  }
+}

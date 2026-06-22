@@ -1,0 +1,17 @@
+.tt-top-bar[data-tt-enhancer-hidden-element-notice="true"] {
+  height: 30px !important;
+  min-height: 30px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+.tt-top-bar[data-tt-enhancer-hidden-element-notice="true"] .tt-button {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.tt-top-bar[data-tt-enhancer-hidden-element-notice="true"] .tt-button__text {
+  padding: 3px 5px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}

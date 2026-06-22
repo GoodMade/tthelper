@@ -1,0 +1,83 @@
+
+  <div class="cards" id="cards">
+    <!-- Card 1 -->
+    <article class="card card-1">
+      <div class="card-head">
+        <h3 class="card-title">Find your flow</h3>
+        <span class="card-sub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h.01M9 12h.01M14 12h.01M19 12h.01"/></svg>
+          Planning your lesson
+        </span>
+      </div>
+      <div class="card-foot">
+        <button class="listen-btn" data-type="video" data-title="Find your flow" data-subtitle="Planning your lesson" data-src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
+          <span class="eq-icon"></span> Слушать
+        </button>
+        <span class="card-caption">Average time saved per lesson</span>
+      </div>
+    </article>
+
+    <!-- Card 2 -->
+    <article class="card card-2">
+      <div class="card-head">
+        <h3 class="card-title">Focus your mind</h3>
+        <span class="card-sub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9v6M8 5v14M12 8v8M16 4v16M20 9v6"/></svg>
+          Capturing the discussion
+        </span>
+      </div>
+      <div class="card-foot">
+        <button class="listen-btn" data-type="audio" data-title="Focus your mind" data-subtitle="Capturing the discussion" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">
+          <span class="eq-icon"></span> Слушать
+        </button>
+        <span class="card-caption">Beta users that liked or loved Bobbin</span>
+      </div>
+    </article>
+
+    <!-- Card 3 -->
+    <article class="card card-3">
+      <div class="card-head">
+        <h3 class="card-title">Feel your value</h3>
+        <span class="card-sub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>
+          Sending progress report
+        </span>
+      </div>
+      <div class="card-foot">
+        <button class="listen-btn" data-type="audio" data-title="Feel your value" data-subtitle="Sending progress report" data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">
+          <span class="eq-icon"></span> Слушать
+        </button>
+        <span class="card-caption">Lesson report satisfaction rate</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="dots" id="dots"></div>
+
+  <!-- Popup player -->
+  <div class="player-overlay" id="overlay" aria-hidden="true">
+    <div class="player" role="dialog" aria-modal="true" aria-label="Аудио плеер">
+      <div class="player-top">
+        <div class="player-badge"><span class="eq-icon"></span></div>
+        <div class="player-meta">
+          <strong id="pTitle">Title</strong>
+          <span id="pSubtitle">Subtitle</span>
+        </div>
+        <button class="player-close" id="pClose" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="player-body" id="pBody"></div>
+    </div>
+  </div>
+
+  <!-- Reusable animated equalizer icon template -->
+  <template id="eqTemplate">
+    <svg class="eq" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 250" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <g>
+        <g class="eq-bar" transform="matrix(1,0,0,1,5,50.08747863769531)"><path fill="rgb(29,24,19)" d="M40,20 C40,8.961999893188477 31.038000106811523,0 20,0 C20,0 20,0 20,0 C8.961999893188477,0 0,8.961999893188477 0,20 C0,20 0,129.82504272460938 0,129.82504272460938 C0,140.863037109375 8.961999893188477,149.82504272460938 20,149.82504272460938 C20,149.82504272460938 20,149.82504272460938 20,149.82504272460938 C31.038000106811523,149.82504272460938 40,140.863037109375 40,129.82504272460938 C40,129.82504272460938 40,20 40,20z"/></g>
+        <g class="eq-bar" transform="matrix(1,0,0,1,56,74.80192565917969)"><path fill="rgb(29,24,19)" d="M40,20 C40,8.961999893188477 31.038000106811523,0 20,0 C20,0 20,0 20,0 C8.961999893188477,0 0,8.961999893188477 0,20 C0,20 0,80.3961410522461 0,80.3961410522461 C0,91.43414306640625 8.961999893188477,100.3961410522461 20,100.3961410522461 C20,100.3961410522461 20,100.3961410522461 20,100.3961410522461 C31.038000106811523,100.3961410522461 40,91.43414306640625 40,80.3961410522461 C40,80.3961410522461 40,20 40,20z"/></g>
+        <g class="eq-bar" transform="matrix(1,0,0,1,105,60.685340881347656)"><path fill="rgb(29,24,19)" d="M40,20 C40,8.961999893188477 31.038000106811523,0 20,0 C20,0 20,0 20,0 C8.961999893188477,0 0,8.961999893188477 0,20 C0,20 0,108.62931823730469 0,108.62931823730469 C0,119.66732025146484 8.961999893188477,128.6293182373047 20,128.6293182373047 C20,128.6293182373047 20,128.6293182373047 20,128.6293182373047 C31.038000106811523,128.6293182373047 40,119.66732025146484 40,108.62931823730469 C40,108.62931823730469 40,20 40,20z"/></g>
+        <g class="eq-bar" transform="matrix(1,0,0,1,155,36.781883239746094)"><path fill="rgb(29,24,19)" d="M40,20 C40,8.961999893188477 31.038000106811523,0 20,0 C20,0 20,0 20,0 C8.961999893188477,0 0,8.961999893188477 0,20 C0,20 0,156.4362335205078 0,156.4362335205078 C0,167.47422790527344 8.961999893188477,176.4362335205078 20,176.4362335205078 C20,176.4362335205078 20,176.4362335205078 20,176.4362335205078 C31.038000106811523,176.4362335205078 40,167.47422790527344 40,156.4362335205078 C40,156.4362335205078 40,20 40,20z"/></g>
+        <g class="eq-bar" transform="matrix(1,0,0,1,205,69.3953857421875)"><path fill="rgb(29,24,19)" d="M40,20 C40,8.961999893188477 31.038000106811523,0 20,0 C20,0 20,0 20,0 C8.961999893188477,0 0,8.961999893188477 0,20 C0,20 0,91.209228515625 0,91.209228515625 C0,102.24723052978516 8.961999893188477,111.209228515625 20,111.209228515625 C20,111.209228515625 20,111.209228515625 20,111.209228515625 C31.038000106811523,111.209228515625 40,102.24723052978516 40,91.209228515625 C40,91.209228515625 40,20 40,20z"/></g>
+      </g>
+    </svg>
+  </template>

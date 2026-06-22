@@ -1,0 +1,3463 @@
+{
+  "type": "taptop-enhancer-layer-export",
+  "version": 1,
+  "exportedAt": "2026-06-13T18:25:37.593Z",
+  "sourceUrl": "",
+  "layerName": "div",
+  "clipboardData": {
+    "verId": 9002495,
+    "designId": 81692316,
+    "copiedLayout": {
+      "tree": {
+        "version": "3.1.0",
+        "tags": {
+          "ih28om138": {
+            "id": "ih28om138",
+            "widgetName": "div",
+            "type": "div",
+            "alias": "div",
+            "className": "div",
+            "classNameIds": [
+              "class_inijb3u85",
+              "class_ixj9k6mwy"
+            ],
+            "selectorData": {
+              "0": {
+                "stateCss": [
+                  "hover"
+                ]
+              }
+            },
+            "children": [
+              "i47vcduq1",
+              "i6trdfvyt",
+              "icttacgbt",
+              "ijkl3c1ff",
+              "in0ukm0cb",
+              "istx51z4x",
+              "ij0icg1tz",
+              "iibgesimd",
+              "it8bdylqk",
+              "i5nirvfxg",
+              "ixm9az420"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "dataAccess": 7
+          },
+          "i47vcduq1": {
+            "id": "i47vcduq1",
+            "widgetName": "text",
+            "type": "text",
+            "parent": "ih28om138",
+            "className": "text",
+            "classNameIds": [
+              "class_ie0vbwqdy"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Текст"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i6trdfvyt": {
+            "id": "i6trdfvyt",
+            "widgetName": "tt_link_universal",
+            "widgetSettings": {
+              "screen": {
+                "type": "link",
+                "eventName": "none",
+                "eventElement": "self",
+                "eventAction": "",
+                "displayType": "",
+                "selectedTag": "",
+                "linkType": "link",
+                "blank": false
+              }
+            },
+            "type": "tt_link_universal",
+            "parent": "ih28om138",
+            "tagName": "a",
+            "alias": "Link universal",
+            "className": "link",
+            "classNameIds": [
+              "class_id7j84qt8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT",
+              "SET_LINK_UNIVERSAL"
+            ],
+            "data": {
+              "href": {
+                "type": "STRING",
+                "value": "/"
+              },
+              "text": {
+                "type": "HTML",
+                "value": "Ссылка"
+              },
+              "data-action-element": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "icttacgbt": {
+            "id": "icttacgbt",
+            "widgetName": "tt_link_universal",
+            "widgetSettings": {
+              "screen": {
+                "type": "link",
+                "eventName": "none",
+                "eventElement": "self",
+                "eventAction": "",
+                "displayType": "",
+                "selectedTag": "",
+                "linkType": "link",
+                "blank": false
+              }
+            },
+            "type": "tt_link_block",
+            "parent": "ih28om138",
+            "tagName": "a",
+            "alias": "Link Block",
+            "className": "link-block",
+            "classNameIds": [
+              "class_i20oken6g"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT",
+              "SET_LINK_UNIVERSAL"
+            ],
+            "data": {
+              "href": {
+                "type": "STRING",
+                "value": "/"
+              },
+              "data-action-element": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ijkl3c1ff": {
+            "id": "ijkl3c1ff",
+            "widgetName": "tt_link_universal",
+            "widgetSettings": {
+              "screen": {
+                "type": "button",
+                "eventName": "none",
+                "eventElement": "self",
+                "eventAction": "",
+                "displayType": "",
+                "selectedTag": "",
+                "linkType": "link",
+                "blank": false
+              }
+            },
+            "type": "tt_link_button",
+            "parent": "ih28om138",
+            "alias": "Button",
+            "className": "button",
+            "classNameIds": [
+              "class_ikx52d8mc"
+            ],
+            "children": [
+              "ihswt0ob5"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "ATTR_HREF"
+            ],
+            "attr": {
+              "role": "button"
+            },
+            "data": {
+              "href": {
+                "type": "STRING",
+                "value": "/"
+              },
+              "data-action-element": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ihswt0ob5": {
+            "id": "ihswt0ob5",
+            "parent": "ijkl3c1ff",
+            "tagName": "span",
+            "alias": "Text",
+            "className": "text-button",
+            "classNameIds": [
+              "class_i1qo2f7sl"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Кнопка"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "in0ukm0cb": {
+            "id": "in0ukm0cb",
+            "widgetName": "tt_list",
+            "type": "tt_list",
+            "parent": "ih28om138",
+            "className": "list",
+            "classNameIds": [
+              "class_ifnm8az0p"
+            ],
+            "children": [
+              "ik15v1uuu"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT_CHILDREN"
+            ],
+            "dataAccess": 7
+          },
+          "ik15v1uuu": {
+            "id": "ik15v1uuu",
+            "parent": "in0ukm0cb",
+            "alias": "Item",
+            "className": "list__item",
+            "classNameIds": [
+              "class_idmbkcnur"
+            ],
+            "children": [
+              "i1iqfdq7v"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_ik15v1uuu",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "i1iqfdq7v": {
+            "id": "i1iqfdq7v",
+            "parent": "ik15v1uuu",
+            "alias": "Text",
+            "className": "text",
+            "classNameIds": [
+              "class_ie0vbwqdy"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "ik15v1uuu",
+                "path": [
+                  "text"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "istx51z4x": {
+            "id": "istx51z4x",
+            "widgetName": "tt_blocklist",
+            "widgetSettings": {
+              "screen": {
+                "slider": false,
+                "sameHeight": false,
+                "horizontalAlign": "flex-start",
+                "effect": "slide",
+                "loop": true,
+                "returnToFirst": false,
+                "speed": 500,
+                "direction": "horizontal",
+                "dotsType": "points",
+                "swipe": true,
+                "lastSlideArrow": false,
+                "center": false,
+                "column": 3,
+                "columnGroup": 1,
+                "controlsGroup": false,
+                "autoplay": false,
+                "delay": 5000,
+                "touchThreshold": 100,
+                "childrenAsync": false,
+                "isMarquee": false,
+                "marquee": {
+                  "direction": "left",
+                  "scrollSpeed": 10,
+                  "hoverStop": false
+                }
+              }
+            },
+            "type": "tt_blocklist",
+            "parent": "ih28om138",
+            "className": "blocklist",
+            "classNameIds": [
+              "class_ib6qiarqo"
+            ],
+            "children": [
+              "i5d8gvewg",
+              "iozgp8ngv",
+              "iaweoxxkf",
+              "iwb4ktzrt"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "dataAccess": 7
+          },
+          "i5d8gvewg": {
+            "id": "i5d8gvewg",
+            "parent": "istx51z4x",
+            "className": "blocklist__list-wrapper",
+            "classNameIds": [
+              "class_iu153q6fk"
+            ],
+            "children": [
+              "ielkln1vj"
+            ],
+            "dataAccess": 7
+          },
+          "ielkln1vj": {
+            "id": "ielkln1vj",
+            "parent": "i5d8gvewg",
+            "className": "blocklist__list",
+            "classNameIds": [
+              "class_iivdv9ysi"
+            ],
+            "children": [
+              "in5ij76h5"
+            ],
+            "can": [
+              "INSERT_CHILDREN"
+            ],
+            "dataAccess": 7
+          },
+          "in5ij76h5": {
+            "id": "in5ij76h5",
+            "parent": "ielkln1vj",
+            "className": "blocklist__item-wrapper",
+            "classNameIds": [
+              "class_i9h4tc0ja"
+            ],
+            "children": [
+              "iyi5ut718"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in5ij76h5",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "iyi5ut718": {
+            "id": "iyi5ut718",
+            "parent": "in5ij76h5",
+            "alias": "Item",
+            "className": "blocklist__item",
+            "classNameIds": [
+              "class_iwpttbwv1"
+            ],
+            "children": [
+              "i0jgyefho",
+              "i94446ic9"
+            ],
+            "can": [
+              "SET_CURRENT_STATE",
+              "INSERT",
+              "SELECT"
+            ],
+            "dataAccess": 7,
+            "fn": {
+              "nth": "parent"
+            }
+          },
+          "i0jgyefho": {
+            "id": "i0jgyefho",
+            "parent": "iyi5ut718",
+            "alias": "Text",
+            "className": "blocklist__text-title",
+            "classNameIds": [
+              "class_iuaoz240s"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "in5ij76h5",
+                "path": [
+                  "title"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i94446ic9": {
+            "id": "i94446ic9",
+            "parent": "iyi5ut718",
+            "alias": "Text",
+            "className": "text",
+            "classNameIds": [
+              "class_ie0vbwqdy"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "in5ij76h5",
+                "path": [
+                  "text"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iozgp8ngv": {
+            "id": "iozgp8ngv",
+            "parent": "istx51z4x",
+            "className": "blocklist__arrows-wrapper",
+            "classNameIds": [
+              "class_i5pztcyt8"
+            ],
+            "children": [
+              "il2109d3p"
+            ],
+            "dataAccess": 7
+          },
+          "il2109d3p": {
+            "id": "il2109d3p",
+            "parent": "iozgp8ngv",
+            "alias": "Controls",
+            "className": "blocklist__arrows",
+            "classNameIds": [
+              "class_ikg8yizmz"
+            ],
+            "children": [
+              "i2m69wukl",
+              "id3cfgcrj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i2m69wukl": {
+            "id": "i2m69wukl",
+            "parent": "il2109d3p",
+            "alias": "Prev",
+            "className": "blocklist__arrow-prev",
+            "classNameIds": [
+              "class_iw04ym2o9"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "id3cfgcrj": {
+            "id": "id3cfgcrj",
+            "parent": "il2109d3p",
+            "alias": "Next",
+            "className": "blocklist__arrow-next",
+            "classNameIds": [
+              "class_ifp6cjyat"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "iaweoxxkf": {
+            "id": "iaweoxxkf",
+            "parent": "istx51z4x",
+            "className": "blocklist__pagination-wrapper",
+            "classNameIds": [
+              "class_ikusxnvyi"
+            ],
+            "children": [
+              "iaioxdu47",
+              "ixbc2i2g4"
+            ],
+            "dataAccess": 7
+          },
+          "iaioxdu47": {
+            "id": "iaioxdu47",
+            "parent": "iaweoxxkf",
+            "alias": "Page",
+            "className": "blocklist__pages",
+            "classNameIds": [
+              "class_ic1uzq3nx"
+            ],
+            "children": [
+              "idhveguzi",
+              "i71wt007u",
+              "ivqzky8to"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7,
+            "isRemoved": true
+          },
+          "idhveguzi": {
+            "id": "idhveguzi",
+            "parent": "iaioxdu47",
+            "alias": "Active",
+            "className": "blocklist__current-page",
+            "classNameIds": [
+              "class_i89y2mhx5"
+            ],
+            "children": [
+              "i6o0xr3ie"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i6o0xr3ie": {
+            "id": "i6o0xr3ie",
+            "parent": "idhveguzi",
+            "alias": "Bullet",
+            "className": "blocklist__current-page-number",
+            "classNameIds": [
+              "class_isz2c0c6v"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in5ij76h5",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "i71wt007u": {
+            "id": "i71wt007u",
+            "parent": "iaioxdu47",
+            "alias": "Delimiter",
+            "className": "blocklist__page-delimiter",
+            "classNameIds": [
+              "class_iub7hi3ba"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "STRING",
+                "value": "/"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ivqzky8to": {
+            "id": "ivqzky8to",
+            "parent": "iaioxdu47",
+            "alias": "Amount",
+            "className": "blocklist__page-count",
+            "classNameIds": [
+              "class_ixp5dizol"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "STRING",
+                "value": "3"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ixbc2i2g4": {
+            "id": "ixbc2i2g4",
+            "parent": "iaweoxxkf",
+            "alias": "Pagination",
+            "className": "blocklist__pagination",
+            "classNameIds": [
+              "class_i84qhitsx"
+            ],
+            "children": [
+              "i8cb0dnl2"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i8cb0dnl2": {
+            "id": "i8cb0dnl2",
+            "parent": "ixbc2i2g4",
+            "alias": "Bullet",
+            "className": "blocklist__pagination-item",
+            "classNameIds": [
+              "class_id7kp58p0"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in5ij76h5",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "iwb4ktzrt": {
+            "id": "iwb4ktzrt",
+            "parent": "istx51z4x",
+            "className": "blocklist__controls-wrapper",
+            "classNameIds": [
+              "class_ipjw2iprh"
+            ],
+            "children": [
+              "ixb3cyywz"
+            ],
+            "dataAccess": 7,
+            "isRemoved": true
+          },
+          "ixb3cyywz": {
+            "id": "ixb3cyywz",
+            "parent": "iwb4ktzrt",
+            "alias": "Controls Container",
+            "className": "blocklist__controls",
+            "classNameIds": [
+              "class_i02je5k5b"
+            ],
+            "children": [
+              "i62m29tdl",
+              "isu16259r"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i62m29tdl": {
+            "id": "i62m29tdl",
+            "parent": "ixb3cyywz",
+            "alias": "Controls Arrow",
+            "className": "blocklist__control-arrows",
+            "classNameIds": [
+              "class_itkbc168a"
+            ],
+            "children": [
+              "i8zvjq2b4",
+              "ikv3k3dxz"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i8zvjq2b4": {
+            "id": "i8zvjq2b4",
+            "parent": "i62m29tdl",
+            "alias": "Prev",
+            "className": "blocklist__arrow-prev2",
+            "classNameIds": [
+              "class_ioifj4dg1"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "ikv3k3dxz": {
+            "id": "ikv3k3dxz",
+            "parent": "i62m29tdl",
+            "alias": "Next",
+            "className": "blocklist__arrow-next2",
+            "classNameIds": [
+              "class_iwf5jobw0"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "isu16259r": {
+            "id": "isu16259r",
+            "parent": "ixb3cyywz",
+            "className": "blocklist__controls-pagination-wrapper",
+            "classNameIds": [
+              "class_i6ac6u67m"
+            ],
+            "children": [
+              "issqlt9kb",
+              "ingyusuac"
+            ],
+            "dataAccess": 7
+          },
+          "issqlt9kb": {
+            "id": "issqlt9kb",
+            "parent": "isu16259r",
+            "alias": "Page",
+            "className": "blocklist__pages2",
+            "classNameIds": [
+              "class_ia0l32umo"
+            ],
+            "children": [
+              "ir5r0qi7m",
+              "i92wuiutc",
+              "isv2lkw9u"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7,
+            "isRemoved": true
+          },
+          "ir5r0qi7m": {
+            "id": "ir5r0qi7m",
+            "parent": "issqlt9kb",
+            "alias": "Active",
+            "className": "blocklist__current-page2",
+            "classNameIds": [
+              "class_i4mwyld5m"
+            ],
+            "children": [
+              "itdtn7c8b"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "itdtn7c8b": {
+            "id": "itdtn7c8b",
+            "parent": "ir5r0qi7m",
+            "alias": "Bullet",
+            "className": "blocklist__current-page-number2",
+            "classNameIds": [
+              "class_ipxhsl84o"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in5ij76h5",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "i92wuiutc": {
+            "id": "i92wuiutc",
+            "parent": "issqlt9kb",
+            "alias": "Delimiter",
+            "className": "blocklist__page-delimiter2",
+            "classNameIds": [
+              "class_if424je05"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "STRING",
+                "value": "/"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "isv2lkw9u": {
+            "id": "isv2lkw9u",
+            "parent": "issqlt9kb",
+            "alias": "Amount",
+            "className": "blocklist__page-count2",
+            "classNameIds": [
+              "class_ib436j2xm"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "STRING",
+                "value": "3"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ingyusuac": {
+            "id": "ingyusuac",
+            "parent": "isu16259r",
+            "alias": "Pagination",
+            "className": "blocklist__pagination2",
+            "classNameIds": [
+              "class_iwbwviu2s"
+            ],
+            "children": [
+              "irips7hkc"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "irips7hkc": {
+            "id": "irips7hkc",
+            "parent": "ingyusuac",
+            "alias": "Bullet",
+            "className": "blocklist__pagination-item2",
+            "classNameIds": [
+              "class_ihirb9jvx"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in5ij76h5",
+                "path": [
+                  "list"
+                ]
+              }
+            }
+          },
+          "ij0icg1tz": {
+            "id": "ij0icg1tz",
+            "widgetName": "tt_search_bar",
+            "widgetSettings": {
+              "screen": {
+                "type": "default",
+                "action": "click",
+                "visibility": false
+              }
+            },
+            "type": "tt_search_bar",
+            "parent": "ih28om138",
+            "tagName": "form",
+            "alias": "search-form",
+            "className": "search-bar",
+            "classNameIds": [
+              "class_i1qqr4k33"
+            ],
+            "children": [
+              "id1aw0of6",
+              "i5ruxo9yd"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "attr": {
+              "action": "/search",
+              "method": "get"
+            },
+            "dataAccess": 7
+          },
+          "id1aw0of6": {
+            "id": "id1aw0of6",
+            "parent": "ij0icg1tz",
+            "tagName": "label",
+            "alias": "Input Label",
+            "className": "search-bar__field",
+            "classNameIds": [
+              "class_igrn1dkpu"
+            ],
+            "children": [
+              "it0f0u50x"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "it0f0u50x": {
+            "id": "it0f0u50x",
+            "parent": "id1aw0of6",
+            "tagName": "input",
+            "alias": "Input",
+            "className": "search-bar__input",
+            "classNameIds": [
+              "class_iimcd24xv"
+            ],
+            "can": [
+              "SELECT",
+              "SET_PLACEHOLDER_STATE",
+              "SET_ATTR_PLACEHOLDER"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "attr": {
+              "name": "search"
+            },
+            "data": {
+              "placeholder": {
+                "type": "STRING",
+                "value": "Поиск по сайту"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i5ruxo9yd": {
+            "id": "i5ruxo9yd",
+            "parent": "ij0icg1tz",
+            "tagName": "button",
+            "alias": "Search Button",
+            "className": "search-bar__button",
+            "classNameIds": [
+              "class_imeyb8b43"
+            ],
+            "children": [
+              "iyr97endm"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "iyr97endm": {
+            "id": "iyr97endm",
+            "parent": "i5ruxo9yd",
+            "tagName": "span",
+            "alias": "Text",
+            "className": "text-button",
+            "classNameIds": [
+              "class_i1qo2f7sl"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Поиск"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iibgesimd": {
+            "id": "iibgesimd",
+            "widgetName": "tt_image",
+            "widgetSettings": {
+              "screen": {
+                "objectFit": "cover",
+                "lockRatio": true
+              }
+            },
+            "type": "tt_image",
+            "parent": "ih28om138",
+            "alias": "Image",
+            "className": "image",
+            "classNameIds": [
+              "class_ie04mk2fv"
+            ],
+            "children": [
+              "ipkixgy3c"
+            ],
+            "can": [
+              "SELECT",
+              "SET_ATTR_SRC",
+              "SET_ATTR_ALT",
+              "SET_ATTR_TITLE"
+            ],
+            "dataAccess": 7
+          },
+          "ipkixgy3c": {
+            "id": "ipkixgy3c",
+            "widgetName": "image__img",
+            "widgetExportSettings": {
+              "image_params": {
+                "width": 640,
+                "height": 480,
+                "method": "resize"
+              }
+            },
+            "parent": "iibgesimd",
+            "tagName": "img",
+            "className": "image__img",
+            "classNameIds": [
+              "class_ihoykzm8z"
+            ],
+            "data": {
+              "src": {
+                "type": "IMAGE2",
+                "value": {
+                  "image_id": 0,
+                  "src": "/d/fgs16_image-placeholder2.png",
+                  "filename": "fgs16_image-placeholder2.png",
+                  "ver_id": 9002495,
+                  "ext": "png",
+                  "image_width": 480,
+                  "image_height": 480,
+                  "size": 0
+                }
+              },
+              "alt": {
+                "type": "STRING",
+                "value": ""
+              },
+              "title": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "it8bdylqk": {
+            "id": "it8bdylqk",
+            "widgetName": "tt_video",
+            "widgetSettings": {
+              "screen": {
+                "type": "video",
+                "viewportAutoPlay": false,
+                "objectFit": "contain"
+              }
+            },
+            "type": "tt_video",
+            "parent": "ih28om138",
+            "tagName": "video",
+            "alias": "video",
+            "className": "video",
+            "classNameIds": [
+              "class_il919s6oc"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "attr": {
+              "preload": "metadata",
+              "controls": "1"
+            },
+            "data": {
+              "src": {
+                "type": "MEDIA2",
+                "value": {
+                  "media_id": 0,
+                  "filename": "",
+                  "name": "",
+                  "width": "",
+                  "height": "",
+                  "size": "",
+                  "thumb": ""
+                }
+              },
+              "poster": {
+                "type": "IMAGE2",
+                "value": {
+                  "image_id": 0,
+                  "src": "/d/fgs16_video-placeholder.svg",
+                  "filename": "fgs16_video-placeholder.svg",
+                  "ver_id": 9002495,
+                  "ext": "svg",
+                  "image_width": 480,
+                  "image_height": 270,
+                  "size": 0
+                }
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i5nirvfxg": {
+            "id": "i5nirvfxg",
+            "widgetName": "tt_svg_icon",
+            "type": "tt_svg_icon",
+            "parent": "ih28om138",
+            "tagName": "span",
+            "alias": "svg icon",
+            "className": "svg-icon",
+            "classNameIds": [
+              "class_i23bz602j"
+            ],
+            "can": [
+              "SELECT",
+              "SET_ATTR_SRC_SVG"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n              <path d=\"M11.5248 2.29489C11.5687 2.20635 11.6364 2.13183 11.7203 2.07972C11.8042 2.02761 11.9011 2 11.9998 2C12.0986 2 12.1955 2.02761 12.2794 2.07972C12.3633 2.13183 12.431 2.20635 12.4748 2.29489L14.7848 6.97389C14.937 7.28186 15.1617 7.5483 15.4395 7.75035C15.7173 7.95239 16.04 8.08401 16.3798 8.13389L21.5458 8.88989C21.6437 8.90408 21.7357 8.94537 21.8113 9.00909C21.887 9.07282 21.9433 9.15644 21.9739 9.2505C22.0045 9.34456 22.0081 9.4453 21.9844 9.54133C21.9607 9.63736 21.9107 9.72485 21.8398 9.79389L18.1038 13.4319C17.8575 13.672 17.6731 13.9684 17.5667 14.2955C17.4602 14.6227 17.4349 14.9708 17.4928 15.3099L18.3748 20.4499C18.3921 20.5477 18.3816 20.6485 18.3443 20.7406C18.3071 20.8327 18.2448 20.9125 18.1644 20.9709C18.084 21.0293 17.9888 21.0639 17.8897 21.0708C17.7906 21.0777 17.6915 21.0566 17.6038 21.0099L12.9858 18.5819C12.6816 18.4221 12.343 18.3386 11.9993 18.3386C11.6557 18.3386 11.3171 18.4221 11.0128 18.5819L6.39585 21.0099C6.30818 21.0563 6.20924 21.0772 6.1103 21.0701C6.01135 21.0631 5.91636 21.0285 5.83614 20.9701C5.75592 20.9118 5.69368 20.8321 5.6565 20.7401C5.61933 20.6482 5.6087 20.5476 5.62585 20.4499L6.50685 15.3109C6.56504 14.9716 6.53983 14.6233 6.43338 14.2959C6.32694 13.9686 6.14245 13.672 5.89585 13.4319L2.15985 9.79489C2.08844 9.72593 2.03784 9.63829 2.01381 9.54197C1.98978 9.44565 1.99328 9.34451 2.02393 9.25008C2.05457 9.15566 2.11111 9.07174 2.18712 9.00788C2.26313 8.94402 2.35555 8.90279 2.45385 8.88889L7.61885 8.13389C7.9591 8.08439 8.28224 7.95295 8.56043 7.75088C8.83863 7.54881 9.06355 7.28216 9.21585 6.97389L11.5248 2.29489Z\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n             </svg>"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ixm9az420": {
+            "id": "ixm9az420",
+            "widgetName": "tt_form",
+            "widgetSettings": {
+              "screen": {
+                "mode": "main",
+                "anketa_id": 0,
+                "name": "Email Form",
+                "initial_state": "",
+                "nativeStyle": false,
+                "disabledNativeStyleSelect": true
+              }
+            },
+            "type": "tt_form",
+            "parent": "ih28om138",
+            "className": "form",
+            "classNameIds": [
+              "class_io49i1mnl",
+              "class_iweloxglz"
+            ],
+            "children": [
+              "ildlxku4h",
+              "iv8tncf15",
+              "ig6ip5dzt"
+            ],
+            "can": [
+              "SELECT",
+              "SET_SUCCESS_STATE"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "dataAccess": 7
+          },
+          "ildlxku4h": {
+            "id": "ildlxku4h",
+            "parent": "ixm9az420",
+            "tagName": "form",
+            "alias": "Default State",
+            "className": "form__state-default",
+            "classNameIds": [
+              "class_ifxvdyx7k"
+            ],
+            "children": [
+              "i57t4mz2c",
+              "i8kgekt0g",
+              "icxjbca6a",
+              "i2u3nutij",
+              "ip2eus14u",
+              "ia40yy16f",
+              "iw3wagoxi",
+              "izvhi0yzw"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "MOVE",
+              "COPY"
+            ],
+            "attr": {
+              "action": "#"
+            },
+            "dataAccess": 7
+          },
+          "i57t4mz2c": {
+            "id": "i57t4mz2c",
+            "parent": "ildlxku4h",
+            "alias": "Form Title",
+            "className": "text-title",
+            "classNameIds": [
+              "class_iqzn2htu6"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Заголовок формы"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i8kgekt0g": {
+            "id": "i8kgekt0g",
+            "widgetName": "tt_form_input",
+            "widgetSettings": {
+              "screen": {
+                "type_id": 1,
+                "type_code": "text",
+                "name": "Name",
+                "required": false,
+                "maxlength": 256,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_input",
+            "parent": "ildlxku4h",
+            "alias": "Input Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk"
+            ],
+            "children": [
+              "iweuokiuz",
+              "int1heubk",
+              "isrc18su8"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "text"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "iweuokiuz": {
+            "id": "iweuokiuz",
+            "parent": "i8kgekt0g",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Имя:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "int1heubk": {
+            "id": "int1heubk",
+            "parent": "i8kgekt0g",
+            "tagName": "input",
+            "alias": "Input",
+            "className": "form__input",
+            "classNameIds": [
+              "class_ikqvnaa1c"
+            ],
+            "can": [
+              "SELECT",
+              "SET_PLACEHOLDER_STATE",
+              "SET_ATTR_PLACEHOLDER"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT",
+              "DELETE",
+              "COPY",
+              "MOVE"
+            ],
+            "attr": {
+              "type": "text"
+            },
+            "data": {
+              "placeholder": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "isrc18su8": {
+            "id": "isrc18su8",
+            "parent": "i8kgekt0g",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "icxjbca6a": {
+            "id": "icxjbca6a",
+            "widgetName": "tt_form_input",
+            "widgetSettings": {
+              "screen": {
+                "type_id": 13,
+                "type_code": "email",
+                "name": "Email address",
+                "required": false,
+                "maxlength": 256,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_input",
+            "parent": "ildlxku4h",
+            "alias": "Input Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk"
+            ],
+            "children": [
+              "i8qf3fkgd",
+              "i3wk9u2wg",
+              "ijvv0ggpj"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "email"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "i8qf3fkgd": {
+            "id": "i8qf3fkgd",
+            "parent": "icxjbca6a",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Email:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i3wk9u2wg": {
+            "id": "i3wk9u2wg",
+            "parent": "icxjbca6a",
+            "tagName": "input",
+            "alias": "Input",
+            "className": "form__input",
+            "classNameIds": [
+              "class_ikqvnaa1c"
+            ],
+            "can": [
+              "SELECT",
+              "SET_PLACEHOLDER_STATE",
+              "SET_ATTR_PLACEHOLDER"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT",
+              "DELETE",
+              "COPY",
+              "MOVE"
+            ],
+            "attr": {
+              "type": "email"
+            },
+            "data": {
+              "placeholder": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ijvv0ggpj": {
+            "id": "ijvv0ggpj",
+            "parent": "icxjbca6a",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i2u3nutij": {
+            "id": "i2u3nutij",
+            "widgetName": "tt_form_textarea",
+            "widgetSettings": {
+              "screen": {
+                "name": "Textarea",
+                "type_id": 2,
+                "type_field": "textarea",
+                "required": false,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_textarea",
+            "parent": "ildlxku4h",
+            "alias": "Textarea Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk",
+              "class_icgyorenb"
+            ],
+            "children": [
+              "ilmtwvqwu",
+              "iilgk60am",
+              "iqv7o8a91"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "textarea"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "ilmtwvqwu": {
+            "id": "ilmtwvqwu",
+            "parent": "i2u3nutij",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Область ввода:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iilgk60am": {
+            "id": "iilgk60am",
+            "parent": "i2u3nutij",
+            "tagName": "textarea",
+            "alias": "Textarea",
+            "className": "form__textarea",
+            "classNameIds": [
+              "class_i72pbqg0m"
+            ],
+            "can": [
+              "SELECT",
+              "SET_PLACEHOLDER_STATE",
+              "SET_ATTR_PLACEHOLDER"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT",
+              "DELETE",
+              "COPY",
+              "MOVE"
+            ],
+            "data": {
+              "placeholder": {
+                "type": "STRING",
+                "value": ""
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iqv7o8a91": {
+            "id": "iqv7o8a91",
+            "parent": "i2u3nutij",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ip2eus14u": {
+            "id": "ip2eus14u",
+            "widgetName": "tt_form_checkbox_group",
+            "widgetSettings": {
+              "screen": {
+                "name": "Checkbox group",
+                "type_id": 5,
+                "required": false,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_checkbox_group",
+            "parent": "ildlxku4h",
+            "alias": "Checkbox Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk",
+              "class_i00098rmp"
+            ],
+            "children": [
+              "i7ax5dx0u",
+              "ids8kafqm",
+              "ipc9ckwcu"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "checkbox_group"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "i7ax5dx0u": {
+            "id": "i7ax5dx0u",
+            "parent": "ip2eus14u",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Список с галочками:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ids8kafqm": {
+            "id": "ids8kafqm",
+            "parent": "ip2eus14u",
+            "alias": "Checkbox List",
+            "className": "form__widget-group",
+            "classNameIds": [
+              "class_ij1omm2f4"
+            ],
+            "children": [
+              "in1n9180l"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "dataAccess": 7
+          },
+          "in1n9180l": {
+            "id": "in1n9180l",
+            "parent": "ids8kafqm",
+            "tagName": "label",
+            "alias": "Checkbox Item",
+            "className": "form__widget-item",
+            "classNameIds": [
+              "class_i7wilub4m"
+            ],
+            "children": [
+              "ixz6xzazz",
+              "im7e2twj6",
+              "i0hck8l0v"
+            ],
+            "can": [
+              "SELECT",
+              "SET_CHECKED_STATE"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_in1n9180l",
+                "path": [
+                  "variants"
+                ]
+              }
+            }
+          },
+          "ixz6xzazz": {
+            "id": "ixz6xzazz",
+            "parent": "in1n9180l",
+            "tagName": "input",
+            "alias": "Checkbox Standard",
+            "className": "form__checkbox",
+            "classNameIds": [
+              "class_i0tsvfls7"
+            ],
+            "can": [
+              "SELECT",
+              "SET_ATTR_VALUE"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "attr": {
+              "type": "checkbox",
+              "checked": "",
+              "name": "checkbox-ixz6xzazz",
+              "readOnly": ""
+            },
+            "data": {
+              "value": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "in1n9180l",
+                "path": [
+                  "value"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "strip-attr": "value"
+            }
+          },
+          "im7e2twj6": {
+            "id": "im7e2twj6",
+            "parent": "in1n9180l",
+            "tagName": "span",
+            "alias": "Checkbox Styled",
+            "className": "form__checkbox-styled",
+            "classNameIds": [
+              "class_ighw8e89d"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "i0hck8l0v": {
+            "id": "i0hck8l0v",
+            "parent": "in1n9180l",
+            "tagName": "span",
+            "alias": "Checkbox Label",
+            "className": "form__label-text",
+            "classNameIds": [
+              "class_i9jfh26w0"
+            ],
+            "can": [
+              "SET_TEXT",
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "in1n9180l",
+                "path": [
+                  "value"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ipc9ckwcu": {
+            "id": "ipc9ckwcu",
+            "parent": "ip2eus14u",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ia40yy16f": {
+            "id": "ia40yy16f",
+            "widgetName": "tt_form_radio_group",
+            "widgetSettings": {
+              "screen": {
+                "name": "Radio group",
+                "type_id": 8,
+                "required": false,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_radio_group",
+            "parent": "ildlxku4h",
+            "alias": "Radio Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk",
+              "class_ig02ov58d"
+            ],
+            "children": [
+              "ix27o3rig",
+              "ii4jcm75s",
+              "i2pqokil4"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "radio_group"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "ix27o3rig": {
+            "id": "ix27o3rig",
+            "parent": "ia40yy16f",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Радио группа:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ii4jcm75s": {
+            "id": "ii4jcm75s",
+            "parent": "ia40yy16f",
+            "alias": "Radio list",
+            "className": "form__widget-group",
+            "classNameIds": [
+              "class_ij1omm2f4"
+            ],
+            "children": [
+              "ijsz0rosk"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "dataAccess": 7
+          },
+          "ijsz0rosk": {
+            "id": "ijsz0rosk",
+            "parent": "ii4jcm75s",
+            "tagName": "label",
+            "alias": "Radio Item",
+            "className": "form__widget-item",
+            "classNameIds": [
+              "class_i7wilub4m"
+            ],
+            "children": [
+              "ivwc7nkli",
+              "ihbxesn1j",
+              "ictmrf5xs"
+            ],
+            "can": [
+              "SELECT",
+              "SET_CHECKED_STATE"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_ijsz0rosk",
+                "path": [
+                  "variants"
+                ]
+              }
+            }
+          },
+          "ivwc7nkli": {
+            "id": "ivwc7nkli",
+            "parent": "ijsz0rosk",
+            "tagName": "input",
+            "alias": "Radio Standard",
+            "className": "form__radio",
+            "classNameIds": [
+              "class_ip3t23n3j"
+            ],
+            "can": [
+              "SET_ATTR_VALUE",
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "attr": {
+              "type": "radio",
+              "name": "radio-ivwc7nkli",
+              "checked": "",
+              "readOnly": ""
+            },
+            "data": {
+              "value": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "ijsz0rosk",
+                "path": [
+                  "value"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "strip-attr": "value"
+            }
+          },
+          "ihbxesn1j": {
+            "id": "ihbxesn1j",
+            "parent": "ijsz0rosk",
+            "tagName": "span",
+            "alias": "Radio Styled",
+            "className": "form__radio-styled",
+            "classNameIds": [
+              "class_i8acy7hu1"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "dataAccess": 7
+          },
+          "ictmrf5xs": {
+            "id": "ictmrf5xs",
+            "parent": "ijsz0rosk",
+            "tagName": "span",
+            "alias": "Radio Label",
+            "className": "form__label-text",
+            "classNameIds": [
+              "class_i9jfh26w0"
+            ],
+            "can": [
+              "SET_TEXT",
+              "SELECT"
+            ],
+            "prevent": [
+              "MOVE",
+              "DELETE",
+              "COPY"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "ijsz0rosk",
+                "path": [
+                  "value"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i2pqokil4": {
+            "id": "i2pqokil4",
+            "parent": "ia40yy16f",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iw3wagoxi": {
+            "id": "iw3wagoxi",
+            "widgetName": "tt_form_select",
+            "widgetSettings": {
+              "screen": {
+                "name": "Select",
+                "type_id": 3,
+                "required": false,
+                "selected": 0,
+                "dictionary_id": 0,
+                "alias": ""
+              }
+            },
+            "type": "tt_form_select",
+            "parent": "ildlxku4h",
+            "alias": "Select Group",
+            "className": "form__field",
+            "classNameIds": [
+              "class_ifga73yxk",
+              "class_ix6jg034p"
+            ],
+            "children": [
+              "iygcxj4yo",
+              "i9s6i4lji",
+              "icb1f0d8b"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "CHILDREN_MOVE_OUT"
+            ],
+            "attr": {
+              "data-type-field": "select"
+            },
+            "dataAccess": 7,
+            "pseudo": {
+              "0": "error"
+            }
+          },
+          "iygcxj4yo": {
+            "id": "iygcxj4yo",
+            "parent": "iw3wagoxi",
+            "alias": "Field Label",
+            "className": "text-subtitle",
+            "classNameIds": [
+              "class_i94kvt7f8"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Выпадающий список:"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "i9s6i4lji": {
+            "id": "i9s6i4lji",
+            "parent": "iw3wagoxi",
+            "tagName": "select",
+            "alias": "Select",
+            "className": "form__select",
+            "classNameIds": [
+              "class_izgh3vvnj"
+            ],
+            "children": [
+              "i9a0i9wy1"
+            ],
+            "can": [
+              "SELECT",
+              "SET_OPTION_TAG_COLOR"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "dataAccess": 7
+          },
+          "i9a0i9wy1": {
+            "id": "i9a0i9wy1",
+            "parent": "i9s6i4lji",
+            "tagName": "option",
+            "alias": "item",
+            "className": "form__select-item",
+            "classNameIds": [
+              "class_if5mk1mbe"
+            ],
+            "data": {
+              "text": {
+                "type": "SUBSCRIBE",
+                "source": "context",
+                "sourceId": "i9a0i9wy1",
+                "path": [
+                  "option"
+                ]
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7,
+            "fn": {
+              "each": {
+                "type": "SUBSCRIBE",
+                "source": "s3",
+                "sourceId": "$mc_i9a0i9wy1",
+                "path": [
+                  "options"
+                ]
+              }
+            }
+          },
+          "icb1f0d8b": {
+            "id": "icb1f0d8b",
+            "parent": "iw3wagoxi",
+            "alias": "Error Message",
+            "className": "form__field-error",
+            "classNameIds": [
+              "class_ihqwsy7jj"
+            ],
+            "can": [
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "PARENT_MOVE_OUT",
+              "MOVE"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Это поле обязательно для заполнения"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "izvhi0yzw": {
+            "id": "izvhi0yzw",
+            "type": "link_universal_button",
+            "parent": "ildlxku4h",
+            "tagName": "button",
+            "alias": "Button",
+            "className": "submit_button",
+            "classNameIds": [
+              "class_izoyk1ptg"
+            ],
+            "children": [
+              "i471kbhgi"
+            ],
+            "can": [
+              "SELECT",
+              "INSERT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "attr": {
+              "type": "submit"
+            },
+            "dataAccess": 7
+          },
+          "i471kbhgi": {
+            "id": "i471kbhgi",
+            "parent": "izvhi0yzw",
+            "tagName": "span",
+            "alias": "Text",
+            "className": "text-button",
+            "classNameIds": [
+              "class_i1qo2f7sl"
+            ],
+            "can": [
+              "SELECT",
+              "SET_TEXT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Отправить"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "iv8tncf15": {
+            "id": "iv8tncf15",
+            "parent": "ixm9az420",
+            "alias": "Success State",
+            "className": "form__state-success",
+            "classNameIds": [
+              "class_im3uxdpcx"
+            ],
+            "children": [
+              "ikh9wp5a6"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "MOVE"
+            ],
+            "dataAccess": 7
+          },
+          "ikh9wp5a6": {
+            "id": "ikh9wp5a6",
+            "parent": "iv8tncf15",
+            "alias": "Success Text",
+            "className": "text",
+            "classNameIds": [
+              "class_ie0vbwqdy"
+            ],
+            "can": [
+              "SET_TEXT",
+              "SELECT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Спасибо! Форма отправлена"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          },
+          "ig6ip5dzt": {
+            "id": "ig6ip5dzt",
+            "parent": "ixm9az420",
+            "alias": "Error State",
+            "className": "form__state-error",
+            "classNameIds": [
+              "class_ispjhjcys"
+            ],
+            "children": [
+              "ii42mx6s4"
+            ],
+            "can": [
+              "INSERT",
+              "SELECT"
+            ],
+            "prevent": [
+              "DELETE",
+              "COPY",
+              "MOVE"
+            ],
+            "dataAccess": 7
+          },
+          "ii42mx6s4": {
+            "id": "ii42mx6s4",
+            "parent": "ig6ip5dzt",
+            "alias": "Error Text",
+            "className": "form__text-error",
+            "classNameIds": [
+              "class_izmbrzrrl"
+            ],
+            "can": [
+              "SET_TEXT",
+              "SELECT"
+            ],
+            "prevent": [
+              "PARENT_MOVE_OUT"
+            ],
+            "data": {
+              "text": {
+                "type": "HTML",
+                "value": "Что-то не так. Попробуйте позже"
+              }
+            },
+            "dataSource": "from_parent",
+            "dataAccess": 7
+          }
+        },
+        "forms": {},
+        "root": "ih28om138",
+        "dataCollection": {
+          "map": {
+            "$mc_ik15v1uuu": {
+              "json": {
+                "list": {
+                  "name": "Список",
+                  "type": "meta",
+                  "value": {
+                    "text": {
+                      "name": "Текст",
+                      "type": "html",
+                      "size": "60",
+                      "maxlength": "250",
+                      "required": true
+                    }
+                  },
+                  "defaults": [
+                    {
+                      "text": "Ключевые факторы"
+                    },
+                    {
+                      "text": "Задача организации"
+                    },
+                    {
+                      "text": "Базовые сценарии"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "list": [
+                  {
+                    "text": "Ключевые факторы"
+                  },
+                  {
+                    "text": "Задача организации"
+                  },
+                  {
+                    "text": "Базовые сценарии"
+                  }
+                ]
+              }
+            },
+            "$mc_in5ij76h5": {
+              "json": {
+                "list": {
+                  "name": "Список",
+                  "type": "meta",
+                  "value": {
+                    "title": {
+                      "name": "Заголовок",
+                      "type": "html",
+                      "size": "60",
+                      "maxlength": "250",
+                      "required": true
+                    },
+                    "text": {
+                      "name": "Текст",
+                      "type": "html",
+                      "required": true
+                    }
+                  },
+                  "defaults": [
+                    {
+                      "title": "Ключевые факторы",
+                      "text": "Сделанные на базе интернет-аналитики выводы могут быть указаны как претенденты на роль ключевых факторов."
+                    },
+                    {
+                      "title": "Задача организации",
+                      "text": "Задача организации, в особенности же семантический разбор внешних противодействий требует анализа экономической целесообразности принимаемых решений."
+                    },
+                    {
+                      "title": "Базовые сценарии",
+                      "text": "Лишь базовые сценарии поведения пользователей смешаны с неуникальными данными до степени совершенной неузнаваемости."
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "list": [
+                  {
+                    "title": "Ключевые факторы",
+                    "text": "Сделанные на базе интернет-аналитики выводы могут быть указаны как претенденты на роль ключевых факторов."
+                  },
+                  {
+                    "title": "Задача организации",
+                    "text": "Задача организации, в особенности же семантический разбор внешних противодействий требует анализа экономической целесообразности принимаемых решений."
+                  },
+                  {
+                    "title": "Базовые сценарии",
+                    "text": "Лишь базовые сценарии поведения пользователей смешаны с неуникальными данными до степени совершенной неузнаваемости."
+                  }
+                ]
+              }
+            },
+            "$mc_in1n9180l": {
+              "json": {
+                "variants": {
+                  "name": "Варианты",
+                  "type": "meta",
+                  "value": {
+                    "value": {
+                      "type": "HTML",
+                      "name": "Значение"
+                    }
+                  },
+                  "defaults": [
+                    {
+                      "value": "Вариант 1"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "variants": [
+                  {
+                    "value": "Вариант 1"
+                  }
+                ]
+              }
+            },
+            "$mc_ijsz0rosk": {
+              "json": {
+                "variants": {
+                  "name": "Варианты",
+                  "type": "meta",
+                  "value": {
+                    "value": {
+                      "type": "HTML",
+                      "name": "Значение"
+                    }
+                  },
+                  "defaults": [
+                    {
+                      "value": "Вариант 1"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "variants": [
+                  {
+                    "value": "Вариант 1"
+                  }
+                ]
+              }
+            },
+            "$mc_i9a0i9wy1": {
+              "json": {
+                "options": {
+                  "type": "meta",
+                  "name": "Варианты",
+                  "value": {
+                    "option": {
+                      "type": "text",
+                      "name": "Вариант"
+                    }
+                  },
+                  "defaults": [
+                    {
+                      "option": "Вариант 1"
+                    },
+                    {
+                      "option": "Вариант 2"
+                    },
+                    {
+                      "option": "Вариант 3"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "options": [
+                  {
+                    "option": "Вариант 1"
+                  },
+                  {
+                    "option": "Вариант 2"
+                  },
+                  {
+                    "option": "Вариант 3"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "mainSelectorCollection": {
+        "map": {
+          "screen/.div": {
+            "media": "screen",
+            "selectorText": ".div",
+            "rules": {
+              "width": {
+                "name": "width",
+                "value": "100%",
+                "isCustom": false,
+                "serializeValue": "100%",
+                "number": 100,
+                "unit": "%"
+              },
+              "position": {
+                "name": "position",
+                "value": "relative",
+                "isCustom": false,
+                "serializeValue": "relative"
+              }
+            }
+          },
+          "screen/.text": {
+            "media": "screen",
+            "selectorText": ".text",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "inline-flex",
+                "isCustom": false,
+                "serializeValue": "inline-flex"
+              },
+              "vertical-align": {
+                "name": "vertical-align",
+                "value": "top",
+                "isCustom": false,
+                "serializeValue": "top"
+              },
+              "position": {
+                "name": "position",
+                "value": "relative",
+                "isCustom": false,
+                "serializeValue": "relative"
+              },
+              "margin": {
+                "name": "margin",
+                "value": "0",
+                "isCustom": false,
+                "serializeValue": "0"
+              }
+            }
+          },
+          "screen/.link-block": {
+            "media": "screen",
+            "selectorText": ".link-block",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "inline-flex",
+                "isCustom": false,
+                "serializeValue": "inline-flex"
+              },
+              "cursor": {
+                "name": "cursor",
+                "value": "pointer",
+                "isCustom": false,
+                "serializeValue": "pointer"
+              },
+              "text-decoration-line": {
+                "name": "text-decoration-line",
+                "value": "none",
+                "isCustom": false,
+                "serializeValue": "none"
+              }
+            }
+          },
+          "screen/.svg-icon": {
+            "media": "screen",
+            "selectorText": ".svg-icon",
+            "rules": {
+              "position": {
+                "name": "position",
+                "value": "relative",
+                "isCustom": false,
+                "serializeValue": "relative"
+              },
+              "display": {
+                "name": "display",
+                "value": "inline-flex",
+                "isCustom": false,
+                "serializeValue": "inline-flex"
+              },
+              "justify-content": {
+                "name": "justify-content",
+                "value": "center",
+                "isCustom": false,
+                "serializeValue": "center"
+              },
+              "align-items": {
+                "name": "align-items",
+                "value": "center",
+                "isCustom": false,
+                "serializeValue": "center"
+              },
+              "height": {
+                "name": "height",
+                "value": "32px",
+                "isCustom": false,
+                "serializeValue": "32px",
+                "number": 32,
+                "unit": "px"
+              },
+              "width": {
+                "name": "width",
+                "value": "32px",
+                "isCustom": false,
+                "serializeValue": "32px",
+                "number": 32,
+                "unit": "px"
+              },
+              "overflow-x": {
+                "name": "overflow-x",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              },
+              "overflow-y": {
+                "name": "overflow-y",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              }
+            }
+          },
+          "screen/.image": {
+            "media": "screen",
+            "selectorText": ".image",
+            "rules": {
+              "position": {
+                "name": "position",
+                "value": "relative",
+                "isCustom": false,
+                "serializeValue": "relative"
+              },
+              "display": {
+                "name": "display",
+                "value": "inline-flex",
+                "isCustom": false,
+                "serializeValue": "inline-flex"
+              },
+              "vertical-align": {
+                "name": "vertical-align",
+                "value": "top",
+                "isCustom": false,
+                "serializeValue": "top"
+              },
+              "overflow-x": {
+                "name": "overflow-x",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              },
+              "overflow-y": {
+                "name": "overflow-y",
+                "value": "hidden",
+                "isCustom": false,
+                "serializeValue": "hidden"
+              },
+              "width": {
+                "name": "width",
+                "value": "100px",
+                "isCustom": false,
+                "serializeValue": "100px",
+                "number": 100,
+                "unit": "px"
+              },
+              "height": {
+                "name": "height",
+                "value": "100px",
+                "isCustom": false,
+                "serializeValue": "100px",
+                "number": 100,
+                "unit": "px"
+              }
+            }
+          },
+          "screen/.image__img": {
+            "media": "screen",
+            "selectorText": ".image__img",
+            "rules": {
+              "object-fit": {
+                "name": "object-fit",
+                "value": "cover",
+                "isCustom": false,
+                "serializeValue": "cover"
+              },
+              "width": {
+                "name": "width",
+                "value": "100%",
+                "isCustom": false,
+                "serializeValue": "100%",
+                "number": 100,
+                "unit": "%"
+              },
+              "height": {
+                "name": "height",
+                "value": "100%",
+                "isCustom": false,
+                "serializeValue": "100%",
+                "number": 100,
+                "unit": "%"
+              }
+            }
+          }
+        }
+      },
+      "designSelectorCollection": {
+        "map": {
+          "screen/.div--u-ih28om138": {
+            "media": "screen",
+            "selectorText": ".div--u-ih28om138",
+            "rules": {}
+          },
+          "screen/.form__field--s2-ip2eus14u .form__checkbox": {
+            "media": "screen",
+            "selectorText": ".form__field--s2-ip2eus14u .form__checkbox",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "none",
+                "isCustom": false,
+                "serializeValue": "none"
+              }
+            }
+          },
+          "screen/.form__field--s2-ip2eus14u .form__checkbox-styled": {
+            "media": "screen",
+            "selectorText": ".form__field--s2-ip2eus14u .form__checkbox-styled",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "block",
+                "isCustom": false,
+                "serializeValue": "block"
+              }
+            }
+          },
+          "screen/.form__field--s2-ia40yy16f .form__radio": {
+            "media": "screen",
+            "selectorText": ".form__field--s2-ia40yy16f .form__radio",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "none",
+                "isCustom": false,
+                "serializeValue": "none"
+              }
+            }
+          },
+          "screen/.form__field--s2-ia40yy16f .form__radio-styled": {
+            "media": "screen",
+            "selectorText": ".form__field--s2-ia40yy16f .form__radio-styled",
+            "rules": {
+              "display": {
+                "name": "display",
+                "value": "block",
+                "isCustom": false,
+                "serializeValue": "block"
+              }
+            }
+          },
+          "screen/.form__select--s2-i9s6i4lji": {
+            "media": "screen",
+            "selectorText": ".form__select--s2-i9s6i4lji",
+            "rules": {
+              "appearance": {
+                "name": "appearance",
+                "value": "none",
+                "isCustom": false,
+                "serializeValue": "none"
+              }
+            }
+          }
+        }
+      },
+      "cmSelectorCollection": {
+        "map": {}
+      },
+      "animationSelectorCollection": {
+        "map": {}
+      },
+      "mainClassNameCollection": {
+        "map": {
+          "class_ib6qiarqo": {
+            "id": "class_ib6qiarqo",
+            "value": "blocklist"
+          },
+          "class_ifp6cjyat": {
+            "id": "class_ifp6cjyat",
+            "value": "blocklist__arrow-next"
+          },
+          "class_iwf5jobw0": {
+            "id": "class_iwf5jobw0",
+            "value": "blocklist__arrow-next2"
+          },
+          "class_iw04ym2o9": {
+            "id": "class_iw04ym2o9",
+            "value": "blocklist__arrow-prev"
+          },
+          "class_ioifj4dg1": {
+            "id": "class_ioifj4dg1",
+            "value": "blocklist__arrow-prev2"
+          },
+          "class_ikg8yizmz": {
+            "id": "class_ikg8yizmz",
+            "value": "blocklist__arrows"
+          },
+          "class_i5pztcyt8": {
+            "id": "class_i5pztcyt8",
+            "value": "blocklist__arrows-wrapper"
+          },
+          "class_itkbc168a": {
+            "id": "class_itkbc168a",
+            "value": "blocklist__control-arrows"
+          },
+          "class_i02je5k5b": {
+            "id": "class_i02je5k5b",
+            "value": "blocklist__controls"
+          },
+          "class_i6ac6u67m": {
+            "id": "class_i6ac6u67m",
+            "value": "blocklist__controls-pagination-wrapper"
+          },
+          "class_ipjw2iprh": {
+            "id": "class_ipjw2iprh",
+            "value": "blocklist__controls-wrapper"
+          },
+          "class_i89y2mhx5": {
+            "id": "class_i89y2mhx5",
+            "value": "blocklist__current-page"
+          },
+          "class_isz2c0c6v": {
+            "id": "class_isz2c0c6v",
+            "value": "blocklist__current-page-number"
+          },
+          "class_ipxhsl84o": {
+            "id": "class_ipxhsl84o",
+            "value": "blocklist__current-page-number2"
+          },
+          "class_i4mwyld5m": {
+            "id": "class_i4mwyld5m",
+            "value": "blocklist__current-page2"
+          },
+          "class_iwpttbwv1": {
+            "id": "class_iwpttbwv1",
+            "value": "blocklist__item"
+          },
+          "class_i9h4tc0ja": {
+            "id": "class_i9h4tc0ja",
+            "value": "blocklist__item-wrapper"
+          },
+          "class_iivdv9ysi": {
+            "id": "class_iivdv9ysi",
+            "value": "blocklist__list"
+          },
+          "class_iu153q6fk": {
+            "id": "class_iu153q6fk",
+            "value": "blocklist__list-wrapper"
+          },
+          "class_ixp5dizol": {
+            "id": "class_ixp5dizol",
+            "value": "blocklist__page-count"
+          },
+          "class_ib436j2xm": {
+            "id": "class_ib436j2xm",
+            "value": "blocklist__page-count2"
+          },
+          "class_iub7hi3ba": {
+            "id": "class_iub7hi3ba",
+            "value": "blocklist__page-delimiter"
+          },
+          "class_if424je05": {
+            "id": "class_if424je05",
+            "value": "blocklist__page-delimiter2"
+          },
+          "class_ic1uzq3nx": {
+            "id": "class_ic1uzq3nx",
+            "value": "blocklist__pages"
+          },
+          "class_ia0l32umo": {
+            "id": "class_ia0l32umo",
+            "value": "blocklist__pages2"
+          },
+          "class_i84qhitsx": {
+            "id": "class_i84qhitsx",
+            "value": "blocklist__pagination"
+          },
+          "class_id7kp58p0": {
+            "id": "class_id7kp58p0",
+            "value": "blocklist__pagination-item"
+          },
+          "class_ihirb9jvx": {
+            "id": "class_ihirb9jvx",
+            "value": "blocklist__pagination-item2"
+          },
+          "class_ikusxnvyi": {
+            "id": "class_ikusxnvyi",
+            "value": "blocklist__pagination-wrapper"
+          },
+          "class_iwbwviu2s": {
+            "id": "class_iwbwviu2s",
+            "value": "blocklist__pagination2"
+          },
+          "class_iuaoz240s": {
+            "id": "class_iuaoz240s",
+            "value": "blocklist__text-title"
+          },
+          "class_ikx52d8mc": {
+            "id": "class_ikx52d8mc",
+            "value": "button"
+          },
+          "class_inijb3u85": {
+            "id": "class_inijb3u85",
+            "value": "div"
+          },
+          "class_io49i1mnl": {
+            "id": "class_io49i1mnl",
+            "value": "form"
+          },
+          "class_i0tsvfls7": {
+            "id": "class_i0tsvfls7",
+            "value": "form__checkbox"
+          },
+          "class_ighw8e89d": {
+            "id": "class_ighw8e89d",
+            "value": "form__checkbox-styled"
+          },
+          "class_ifga73yxk": {
+            "id": "class_ifga73yxk",
+            "value": "form__field"
+          },
+          "class_ihqwsy7jj": {
+            "id": "class_ihqwsy7jj",
+            "value": "form__field-error"
+          },
+          "class_ikqvnaa1c": {
+            "id": "class_ikqvnaa1c",
+            "value": "form__input"
+          },
+          "class_i9jfh26w0": {
+            "id": "class_i9jfh26w0",
+            "value": "form__label-text"
+          },
+          "class_ip3t23n3j": {
+            "id": "class_ip3t23n3j",
+            "value": "form__radio"
+          },
+          "class_i8acy7hu1": {
+            "id": "class_i8acy7hu1",
+            "value": "form__radio-styled"
+          },
+          "class_izgh3vvnj": {
+            "id": "class_izgh3vvnj",
+            "value": "form__select"
+          },
+          "class_if5mk1mbe": {
+            "id": "class_if5mk1mbe",
+            "value": "form__select-item"
+          },
+          "class_ifxvdyx7k": {
+            "id": "class_ifxvdyx7k",
+            "value": "form__state-default"
+          },
+          "class_ispjhjcys": {
+            "id": "class_ispjhjcys",
+            "value": "form__state-error"
+          },
+          "class_im3uxdpcx": {
+            "id": "class_im3uxdpcx",
+            "value": "form__state-success"
+          },
+          "class_izmbrzrrl": {
+            "id": "class_izmbrzrrl",
+            "value": "form__text-error"
+          },
+          "class_i72pbqg0m": {
+            "id": "class_i72pbqg0m",
+            "value": "form__textarea"
+          },
+          "class_ij1omm2f4": {
+            "id": "class_ij1omm2f4",
+            "value": "form__widget-group"
+          },
+          "class_i7wilub4m": {
+            "id": "class_i7wilub4m",
+            "value": "form__widget-item"
+          },
+          "class_ie04mk2fv": {
+            "id": "class_ie04mk2fv",
+            "value": "image"
+          },
+          "class_ihoykzm8z": {
+            "id": "class_ihoykzm8z",
+            "value": "image__img"
+          },
+          "class_id7j84qt8": {
+            "id": "class_id7j84qt8",
+            "value": "link"
+          },
+          "class_i20oken6g": {
+            "id": "class_i20oken6g",
+            "value": "link-block"
+          },
+          "class_ifnm8az0p": {
+            "id": "class_ifnm8az0p",
+            "value": "list"
+          },
+          "class_idmbkcnur": {
+            "id": "class_idmbkcnur",
+            "value": "list__item"
+          },
+          "class_i1qqr4k33": {
+            "id": "class_i1qqr4k33",
+            "value": "search-bar"
+          },
+          "class_imeyb8b43": {
+            "id": "class_imeyb8b43",
+            "value": "search-bar__button"
+          },
+          "class_igrn1dkpu": {
+            "id": "class_igrn1dkpu",
+            "value": "search-bar__field"
+          },
+          "class_iimcd24xv": {
+            "id": "class_iimcd24xv",
+            "value": "search-bar__input"
+          },
+          "class_izoyk1ptg": {
+            "id": "class_izoyk1ptg",
+            "value": "submit_button"
+          },
+          "class_i23bz602j": {
+            "id": "class_i23bz602j",
+            "value": "svg-icon"
+          },
+          "class_ie0vbwqdy": {
+            "id": "class_ie0vbwqdy",
+            "value": "text"
+          },
+          "class_i1qo2f7sl": {
+            "id": "class_i1qo2f7sl",
+            "value": "text-button"
+          },
+          "class_i94kvt7f8": {
+            "id": "class_i94kvt7f8",
+            "value": "text-subtitle"
+          },
+          "class_iqzn2htu6": {
+            "id": "class_iqzn2htu6",
+            "value": "text-title"
+          },
+          "class_il919s6oc": {
+            "id": "class_il919s6oc",
+            "value": "video"
+          }
+        },
+        "countMap": {
+          "blocklist": 1,
+          "blocklist__arrow-next": 1,
+          "blocklist__arrow-next2": 1,
+          "blocklist__arrow-prev": 1,
+          "blocklist__arrow-prev2": 1,
+          "blocklist__arrows": 1,
+          "blocklist__arrows-wrapper": 1,
+          "blocklist__control-arrows": 1,
+          "blocklist__controls": 1,
+          "blocklist__controls-pagination-wrapper": 1,
+          "blocklist__controls-wrapper": 1,
+          "blocklist__current-page": 1,
+          "blocklist__current-page-number": 1,
+          "blocklist__current-page-number2": 1,
+          "blocklist__current-page2": 1,
+          "blocklist__item": 1,
+          "blocklist__item-wrapper": 1,
+          "blocklist__list": 1,
+          "blocklist__list-wrapper": 1,
+          "blocklist__page-count": 1,
+          "blocklist__page-count2": 1,
+          "blocklist__page-delimiter": 1,
+          "blocklist__page-delimiter2": 1,
+          "blocklist__pages": 1,
+          "blocklist__pages2": 1,
+          "blocklist__pagination": 1,
+          "blocklist__pagination-item": 1,
+          "blocklist__pagination-item2": 1,
+          "blocklist__pagination-wrapper": 1,
+          "blocklist__pagination2": 1,
+          "blocklist__text-title": 1,
+          "button": 1,
+          "div": 1,
+          "form": 1,
+          "form__checkbox": 1,
+          "form__checkbox-styled": 1,
+          "form__field": 1,
+          "form__field-error": 1,
+          "form__input": 1,
+          "form__label-text": 1,
+          "form__radio": 1,
+          "form__radio-styled": 1,
+          "form__select": 1,
+          "form__select-item": 1,
+          "form__state-default": 1,
+          "form__state-error": 1,
+          "form__state-success": 1,
+          "form__text-error": 1,
+          "form__textarea": 1,
+          "form__widget-group": 1,
+          "form__widget-item": 1,
+          "image": 1,
+          "image__img": 1,
+          "link": 1,
+          "link-block": 1,
+          "list": 1,
+          "list__item": 1,
+          "search-bar": 1,
+          "search-bar__button": 1,
+          "search-bar__field": 1,
+          "search-bar__input": 1,
+          "submit_button": 1,
+          "svg-icon": 1,
+          "text": 1,
+          "text-button": 1,
+          "text-subtitle": 1,
+          "text-title": 1,
+          "video": 1
+        },
+        "sortMap": {
+          "class_ib6qiarqo": "class_ifp6cjyat",
+          "class_ifp6cjyat": "class_iwf5jobw0",
+          "class_iwf5jobw0": "class_iw04ym2o9",
+          "class_iw04ym2o9": "class_ioifj4dg1",
+          "class_ioifj4dg1": "class_ikg8yizmz",
+          "class_ikg8yizmz": "class_i5pztcyt8",
+          "class_i5pztcyt8": "class_itkbc168a",
+          "class_itkbc168a": "class_i02je5k5b",
+          "class_i02je5k5b": "class_i6ac6u67m",
+          "class_i6ac6u67m": "class_ipjw2iprh",
+          "class_ipjw2iprh": "class_i89y2mhx5",
+          "class_i89y2mhx5": "class_isz2c0c6v",
+          "class_isz2c0c6v": "class_ipxhsl84o",
+          "class_ipxhsl84o": "class_i4mwyld5m",
+          "class_i4mwyld5m": "class_iwpttbwv1",
+          "class_iwpttbwv1": "class_i9h4tc0ja",
+          "class_i9h4tc0ja": "class_iivdv9ysi",
+          "class_iivdv9ysi": "class_iu153q6fk",
+          "class_iu153q6fk": "class_ixp5dizol",
+          "class_ixp5dizol": "class_ib436j2xm",
+          "class_ib436j2xm": "class_iub7hi3ba",
+          "class_iub7hi3ba": "class_if424je05",
+          "class_if424je05": "class_ic1uzq3nx",
+          "class_ic1uzq3nx": "class_ia0l32umo",
+          "class_ia0l32umo": "class_i84qhitsx",
+          "class_i84qhitsx": "class_id7kp58p0",
+          "class_id7kp58p0": "class_ihirb9jvx",
+          "class_ihirb9jvx": "class_ikusxnvyi",
+          "class_ikusxnvyi": "class_iwbwviu2s",
+          "class_iwbwviu2s": "class_iuaoz240s",
+          "class_iuaoz240s": "class_ikx52d8mc",
+          "class_ikx52d8mc": "class_inijb3u85",
+          "class_inijb3u85": "class_io49i1mnl",
+          "class_io49i1mnl": "class_i0tsvfls7",
+          "class_i0tsvfls7": "class_ighw8e89d",
+          "class_ighw8e89d": "class_ifga73yxk",
+          "class_ifga73yxk": "class_ihqwsy7jj",
+          "class_ihqwsy7jj": "class_ikqvnaa1c",
+          "class_ikqvnaa1c": "class_i9jfh26w0",
+          "class_i9jfh26w0": "class_ip3t23n3j",
+          "class_ip3t23n3j": "class_i8acy7hu1",
+          "class_i8acy7hu1": "class_izgh3vvnj",
+          "class_izgh3vvnj": "class_if5mk1mbe",
+          "class_if5mk1mbe": "class_ifxvdyx7k",
+          "class_ifxvdyx7k": "class_ispjhjcys",
+          "class_ispjhjcys": "class_im3uxdpcx",
+          "class_im3uxdpcx": "class_izmbrzrrl",
+          "class_izmbrzrrl": "class_i72pbqg0m",
+          "class_i72pbqg0m": "class_ij1omm2f4",
+          "class_ij1omm2f4": "class_i7wilub4m",
+          "class_i7wilub4m": "class_ie04mk2fv",
+          "class_ie04mk2fv": "class_ihoykzm8z",
+          "class_ihoykzm8z": "class_id7j84qt8",
+          "class_id7j84qt8": "class_i20oken6g",
+          "class_i20oken6g": "class_ifnm8az0p",
+          "class_ifnm8az0p": "class_idmbkcnur",
+          "class_idmbkcnur": "class_i1qqr4k33",
+          "class_i1qqr4k33": "class_imeyb8b43",
+          "class_imeyb8b43": "class_igrn1dkpu",
+          "class_igrn1dkpu": "class_iimcd24xv",
+          "class_iimcd24xv": "class_izoyk1ptg",
+          "class_izoyk1ptg": "class_i23bz602j",
+          "class_i23bz602j": "class_ie0vbwqdy",
+          "class_ie0vbwqdy": "class_i1qo2f7sl",
+          "class_i1qo2f7sl": "class_i94kvt7f8",
+          "class_i94kvt7f8": "class_iqzn2htu6",
+          "class_iqzn2htu6": "class_il919s6oc",
+          "class_il919s6oc": ""
+        },
+        "head": {
+          "id": "class_ib6qiarqo",
+          "value": "blocklist"
+        }
+      },
+      "designClassNameCollection": {
+        "map": {
+          "class_ixj9k6mwy": {
+            "id": "class_ixj9k6mwy",
+            "value": "div--u-ih28om138"
+          },
+          "class_iweloxglz": {
+            "id": "class_iweloxglz",
+            "value": "form--u-ixm9az420"
+          },
+          "class_icgyorenb": {
+            "id": "class_icgyorenb",
+            "value": "form__field--u-i2u3nutij"
+          },
+          "class_ig02ov58d": {
+            "id": "class_ig02ov58d",
+            "value": "form__field--u-ia40yy16f"
+          },
+          "class_i00098rmp": {
+            "id": "class_i00098rmp",
+            "value": "form__field--u-ip2eus14u"
+          },
+          "class_ix6jg034p": {
+            "id": "class_ix6jg034p",
+            "value": "form__field--u-iw3wagoxi"
+          }
+        },
+        "countMap": {
+          "div--u-ih28om138": 1,
+          "form--u-ixm9az420": 1,
+          "form__field--u-i2u3nutij": 1,
+          "form__field--u-ia40yy16f": 1,
+          "form__field--u-ip2eus14u": 1,
+          "form__field--u-iw3wagoxi": 1
+        },
+        "sortMap": {
+          "class_ixj9k6mwy": "class_iweloxglz",
+          "class_iweloxglz": "class_icgyorenb",
+          "class_icgyorenb": "class_ig02ov58d",
+          "class_ig02ov58d": "class_i00098rmp",
+          "class_i00098rmp": "class_ix6jg034p",
+          "class_ix6jg034p": ""
+        },
+        "head": {
+          "id": "class_ixj9k6mwy",
+          "value": "div--u-ih28om138"
+        }
+      }
+    },
+    "action": "copy",
+    "tagID": "ih28om138_0",
+    "isElementInCollection": false
+  }
+}

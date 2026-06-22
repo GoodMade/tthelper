@@ -1,0 +1,8 @@
+body:not(.tt-enhancer-show-tooltips-on-ctrl) .tt-tooltip,
+body:not(.tt-enhancer-show-tooltips-on-ctrl) [class*="tt-tooltip"],
+body:not(.tt-enhancer-show-tooltips-on-ctrl) .rc-tooltip {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

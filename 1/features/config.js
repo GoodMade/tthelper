@@ -212,16 +212,6 @@ const featuresConfig = {
         deinit: "features/fixes/reuse-deleted-class-names.deinit.js",
         defaultValue: true,
         reloadRequired: false
-      },
-      multiSelection: {
-        label: "Работа с несколькими слоями",
-        tooltip: "Позволяет выделять несколько слоев через Shift+клик и Cmd+клик, а также объединять их по Shift+A.",
-        storageKey: "features_multiSelection",
-        css: ["features/canvas/multi-selection.css"],
-        js: ["features/canvas/multi-selection.js"],
-        deinit: "features/canvas/multi-selection.deinit.js",
-        defaultValue: false,
-        reloadRequired: false
       }
     }
   },

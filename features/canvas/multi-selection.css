@@ -1,0 +1,24 @@
+/* Стили для виртуального мультивыделения */
+
+/* Подсветка в панели слоев */
+.tt-layers__item.tt-enhancer-multi-selected > .tt-layers__item-content,
+.tt-layers__item.tt-enhancer-multi-selected > div {
+  background-color: rgba(13, 124, 255, 0.15) !important;
+  outline: 1px solid #0d7cff !important;
+  outline-offset: -1px;
+}
+
+/* Подсветка на холсте */
+[data-tag-id].tt-enhancer-multi-selected {
+  position: relative;
+}
+
+[data-tag-id].tt-enhancer-multi-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  outline: 2px solid #0d7cff;
+  background-color: rgba(13, 124, 255, 0.1);
+  pointer-events: none;
+  z-index: 2147483647;
+}

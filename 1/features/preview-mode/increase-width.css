@@ -1,0 +1,11 @@
+.tt-app--preview .tt-app__canvas{
+width:100%;
+}
+.tt-design-preview__iframe {
+    width: 100% !important;
+Height:calc(100% - 50px) !important;
+}
+.tt-design-preview__scroll-x.tt-scrollbar{
+Display:none !important;
+}
+

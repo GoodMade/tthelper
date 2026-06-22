@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "priority": 10,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "content-security-policy", "operation": "remove" },
+        { "header": "content-security-policy-report-only", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||taptop.pro^",
+      "resourceTypes": ["main_frame", "sub_frame"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 10,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "content-security-policy", "operation": "remove" },
+        { "header": "content-security-policy-report-only", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||taptop.site^",
+      "resourceTypes": ["main_frame", "sub_frame"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 10,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "content-security-policy", "operation": "remove" },
+        { "header": "content-security-policy-report-only", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||onicon.ru^",
+      "resourceTypes": ["main_frame", "sub_frame"]
+    }
+  }
+]
